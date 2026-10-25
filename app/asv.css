@@ -1,0 +1,2039 @@
+/* ======================================================================
+   Sistemas virtualizados: shared controls
+   ====================================================================== */
+
+/* JetBrains Mono turns "--" into one long dash; commands must look exactly as you type them. */
+body.iso {
+  font-variant-ligatures: none;
+}
+
+/* Long commands inside a term must scroll, never widen the column. */
+.sec-body:not(.solo) .terms {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.term {
+  min-width: 0;
+}
+
+.term code {
+  overflow-wrap: anywhere;
+}
+
+.dg-note .ok-text,
+.quiz-why .ok-text {
+  color: var(--anatomy-green);
+}
+
+.dg-note .bad-text,
+.quiz-why .bad-text {
+  color: var(--anatomy-red);
+}
+
+.btn {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--accent) 22%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--anatomy-strong);
+  font: 600 12.5px var(--font-sans), sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 36%, var(--anatomy-card));
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn.ghost {
+  background: var(--anatomy-card);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-text);
+}
+
+.btn.good {
+  background: color-mix(in oklab, var(--anatomy-green) 22%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--anatomy-green);
+}
+
+.btn.bad {
+  background: color-mix(in oklab, var(--anatomy-red) 20%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--anatomy-red);
+}
+
+.btn:focus-visible,
+.steps button:focus-visible,
+.ca-tok:focus-visible,
+.qil-op:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.choice {
+  flex-wrap: wrap;
+}
+
+.choice button code {
+  font: inherit;
+}
+
+.ok-text {
+  color: var(--anatomy-green);
+  fill: var(--anatomy-green) !important;
+}
+
+.bad-text {
+  color: var(--anatomy-red);
+  fill: var(--anatomy-red) !important;
+}
+
+.mono {
+  font-family: var(--anatomy-mono) !important;
+}
+
+.dg-arrow.lit path {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.dg-note code,
+.lead code,
+.term code,
+.exam code,
+.cheat-traps code,
+.iso-legend code {
+  font: 0.9em var(--anatomy-mono);
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: color-mix(in oklab, var(--accent) 12%, var(--anatomy-face));
+  color: var(--anatomy-strong);
+}
+
+/* steps */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font: 12px var(--anatomy-mono);
+}
+
+.steps button {
+  min-width: 34px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
+.steps button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.steps .steps-play {
+  box-shadow: 0 0 0 1px var(--accent);
+  background: color-mix(in oklab, var(--accent) 20%, var(--anatomy-card));
+}
+
+.steps-count {
+  color: var(--anatomy-text);
+  font: 12px var(--anatomy-mono);
+}
+
+/* code blocks */
+.cmd {
+  position: relative;
+  margin: 10px 0 0;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--anatomy-page) 70%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--line);
+  overflow: hidden;
+}
+
+.cmd-title {
+  padding: 6px 80px 6px 12px;
+  font: 600 11px var(--anatomy-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid var(--line);
+}
+
+.cmd pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font: 12.5px/1.55 var(--anatomy-mono);
+  color: var(--anatomy-strong);
+}
+
+.cmd-c {
+  color: var(--anatomy-muted);
+}
+
+.cmd-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-text);
+  font: 11px var(--anatomy-mono);
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.cmd-copy:hover {
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* exam call-out */
+.exam {
+  display: grid;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--anatomy-red) 16%, var(--anatomy-card)), var(--anatomy-card));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--anatomy-red) 55%, transparent);
+  font-size: 15px;
+}
+
+.exam-title {
+  font: 700 11px var(--anatomy-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--anatomy-red);
+}
+
+/* hero chips */
+.hero-chips {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -24px 0 32px;
+}
+
+.countdown {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font: 600 12px var(--anatomy-mono);
+  color: var(--anatomy-page);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.countdown.ghost {
+  color: var(--anatomy-text);
+  background: var(--anatomy-card);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* ======================================================================
+   Part I diagrams
+   ====================================================================== */
+.iso-dom {
+  fill: color-mix(in oklab, var(--anatomy-blue) 14%, transparent);
+  stroke: color-mix(in oklab, var(--anatomy-blue) 50%, transparent);
+}
+
+.iso-dom.virt {
+  fill: color-mix(in oklab, var(--accent) 14%, transparent);
+  stroke: color-mix(in oklab, var(--accent) 50%, transparent);
+}
+
+.iso-token {
+  fill: var(--accent);
+  stroke: var(--anatomy-card);
+  stroke-width: 2;
+}
+
+.iso-bar {
+  fill: var(--anatomy-blue);
+}
+
+.iso-bar.virt {
+  fill: var(--accent);
+}
+
+.dg-node.kern {
+  fill: color-mix(in oklab, var(--anatomy-blue) 25%, var(--anatomy-card));
+  stroke: var(--anatomy-blue);
+}
+
+.dg-node.kern.hv {
+  fill: color-mix(in oklab, var(--accent) 28%, var(--anatomy-card));
+  stroke: var(--accent);
+}
+
+.dg-node.hvc {
+  fill: color-mix(in oklab, var(--accent) 16%, var(--anatomy-card));
+  stroke: var(--accent);
+}
+
+.dg-node.osc {
+  fill: color-mix(in oklab, var(--anatomy-blue) 14%, var(--anatomy-card));
+  stroke: var(--anatomy-blue);
+}
+
+.dg-node.hw {
+  fill: color-mix(in oklab, var(--anatomy-green) 16%, var(--anatomy-card));
+  stroke: var(--anatomy-green);
+}
+
+.dg-node,
+.dg-box rect {
+  transition: fill 0.35s, stroke 0.35s;
+}
+
+/* Popek sets */
+.pg-all {
+  fill: none;
+  stroke: var(--line);
+  stroke-dasharray: 4 5;
+}
+
+.pg-priv {
+  fill: color-mix(in oklab, var(--anatomy-blue) 18%, transparent);
+  stroke: var(--anatomy-blue);
+  stroke-width: 1.5;
+}
+
+.pg-sens {
+  fill: color-mix(in oklab, var(--anatomy-red) 18%, transparent);
+  stroke: var(--anatomy-red);
+  stroke-width: 1.5;
+  transition: cx 0.6s var(--anatomy-ease), rx 0.6s var(--anatomy-ease), ry 0.6s var(--anatomy-ease);
+}
+
+.pg-priv-t {
+  fill: var(--anatomy-blue) !important;
+}
+
+.pg-sens-t {
+  fill: var(--anatomy-red) !important;
+  transition: x 0.6s var(--anatomy-ease), y 0.6s var(--anatomy-ease);
+}
+
+.pg-chip {
+  cursor: pointer;
+  transition: transform 0.6s var(--anatomy-ease);
+}
+
+.pg-chip rect {
+  fill: var(--anatomy-card);
+  stroke: var(--anatomy-mid);
+  stroke-width: 1.2;
+}
+
+.pg-chip text {
+  font: 600 11px var(--anatomy-mono);
+  fill: var(--anatomy-strong) !important;
+}
+
+.pg-chip[data-kind="sens-np"] rect {
+  stroke: var(--anatomy-red);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.pg-chip[data-on] rect {
+  fill: color-mix(in oklab, var(--accent) 40%, var(--anatomy-card));
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.pg-chip:focus-visible {
+  outline: none;
+}
+
+.pg-chip:focus-visible rect {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+/* vCPU matrix */
+.vm-scroll {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.vm-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: separate;
+  border-spacing: 6px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.vm-table th,
+.vm-table td {
+  padding: 12px 10px;
+  border-radius: 10px;
+}
+
+.vm-table thead th {
+  color: var(--anatomy-strong);
+  font-weight: 700;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  transition: box-shadow 0.3s, background 0.3s;
+}
+
+.vm-table thead th:first-child {
+  background: none;
+  box-shadow: none;
+}
+
+.vm-table thead th[data-on] {
+  box-shadow: 0 0 0 2px var(--accent);
+  background: color-mix(in oklab, var(--accent) 18%, var(--anatomy-card));
+}
+
+.vm-props {
+  display: block;
+  margin-top: 4px;
+  font: 600 17px var(--font-sans), "Segoe UI Symbol", sans-serif;
+  color: var(--accent);
+}
+
+.vm-table tbody th {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--anatomy-text);
+  background: var(--anatomy-face);
+}
+
+.vm-table tbody th small {
+  display: block;
+  font-size: 11px;
+  color: var(--anatomy-muted);
+}
+
+.vm-table .vm-vr {
+  font: 700 15px var(--anatomy-mono);
+  color: var(--anatomy-strong);
+}
+
+.vm-table td {
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-strong);
+  transition: background 0.35s, box-shadow 0.35s, transform 0.35s var(--anatomy-ease);
+}
+
+.vm-table td[data-on] {
+  background: color-mix(in oklab, var(--accent) 38%, var(--anatomy-card));
+  box-shadow: 0 0 0 2px var(--accent), 0 10px 30px -14px var(--accent);
+  transform: scale(1.04);
+}
+
+.vm-table td.vm-empty {
+  background: none;
+  box-shadow: 0 0 0 1px var(--line) inset;
+  color: var(--anatomy-muted);
+}
+
+.vm-lost {
+  color: var(--anatomy-red);
+  font: 600 16px var(--font-sans), "Segoe UI Symbol", sans-serif;
+}
+
+.vm-badge {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  text-decoration: line-through;
+  opacity: 0.5;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.vm-badge[data-on] {
+  text-decoration: none;
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--anatomy-strong);
+}
+
+/* taxonomy */
+.tx-node {
+  cursor: pointer;
+}
+
+.tx-node rect {
+  fill: var(--anatomy-face);
+  stroke: var(--anatomy-mid);
+  stroke-width: 1.2;
+  transition: fill 0.3s, stroke 0.3s;
+}
+
+.tx-node[data-on] rect {
+  fill: color-mix(in oklab, var(--accent) 30%, var(--anatomy-card));
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.tx-node:focus-visible {
+  outline: none;
+}
+
+.tx-root {
+  fill: var(--anatomy-page) !important;
+}
+
+.tx-small {
+  font-size: 9.5px !important;
+}
+
+/* iso stack */
+.stk-bay {
+  fill: transparent;
+  transition: fill 0.4s;
+}
+
+.stk-bay[data-on] {
+  fill: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.stk-dot {
+  fill: var(--accent);
+  stroke: var(--anatomy-card);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px var(--accent));
+  transition: transform 0.9s var(--anatomy-ease);
+}
+
+/* datastore: each virtual disk keeps its own tint, in the figure and in the datastore */
+.fig .ds-band > .iso-top {
+  fill: color-mix(in srgb, var(--ds) 60%, var(--anatomy-lit-top));
+}
+
+.fig .ds-band > .iso-shade {
+  fill: color-mix(in srgb, var(--ds) 34%, var(--anatomy-lit-shade));
+}
+
+.fig .ds-band > .iso-edge {
+  stroke: var(--ds);
+}
+
+.ds-band.b0 {
+  --ds: var(--accent);
+}
+
+.ds-band.b1 {
+  --ds: var(--anatomy-blue);
+}
+
+.ds-band.b2 {
+  --ds: var(--anatomy-green);
+}
+
+/* ======================================================================
+   Part II diagrams
+   ====================================================================== */
+.emu-grid,
+.bt-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.bt-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.emu-h {
+  display: block;
+  margin: 0 0 6px;
+  font: 600 11px var(--anatomy-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.emu-mem,
+.bt-list {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  font: 12.5px var(--anatomy-mono);
+}
+
+.emu-mem li,
+.bt-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-strong);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.emu-mem li code {
+  color: var(--anatomy-muted);
+}
+
+.emu-mem li[data-k] {
+  border-left: 3px solid color-mix(in oklab, var(--anatomy-red) 60%, transparent);
+}
+
+.emu-mem li[data-on],
+.bt-list li[data-on] {
+  background: color-mix(in oklab, var(--accent) 30%, var(--anatomy-card));
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+
+.emu-state {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font: 12.5px var(--anatomy-mono);
+}
+
+.emu-state dt {
+  color: var(--anatomy-muted);
+}
+
+.emu-state dd {
+  margin: 0;
+  color: var(--anatomy-strong);
+}
+
+.emu-state dd[data-mode="KERNEL"] {
+  color: var(--anatomy-red);
+  font-weight: 700;
+}
+
+.emu-state dd[data-mode="USER"] {
+  color: var(--anatomy-green);
+  font-weight: 700;
+}
+
+.emu-code {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--anatomy-page) 70%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--line);
+  font: 12px/1.6 var(--anatomy-mono);
+  color: var(--anatomy-text);
+}
+
+.emu-code span {
+  display: block;
+  padding: 0 6px;
+  border-radius: 4px;
+  white-space: pre;
+  transition: background 0.3s, color 0.3s;
+}
+
+.emu-code span[data-on] {
+  background: color-mix(in oklab, var(--accent) 28%, transparent);
+  color: var(--anatomy-strong);
+}
+
+.emu-code span[data-bad] {
+  background: color-mix(in oklab, var(--anatomy-red) 30%, transparent);
+}
+
+.bt-kind {
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-text);
+}
+
+.bt-kind[data-kind="IDENT"] {
+  color: var(--anatomy-green);
+  box-shadow: 0 0 0 1px var(--anatomy-green);
+}
+
+.bt-kind[data-kind="INLINE"] {
+  color: var(--anatomy-blue);
+  box-shadow: 0 0 0 1px var(--anatomy-blue);
+}
+
+.bt-kind[data-kind*="CALLOUT"] {
+  color: var(--anatomy-red);
+  box-shadow: 0 0 0 1px var(--anatomy-red);
+}
+
+.bt-list.tc li {
+  border-left: 3px solid var(--accent);
+}
+
+/* trap timeline */
+.tt-lane rect {
+  fill: color-mix(in oklab, var(--anatomy-face) 70%, transparent);
+  stroke: var(--line);
+}
+
+.tt-lane[data-off] {
+  opacity: 0.35;
+}
+
+.tt-lane:nth-of-type(3) rect {
+  fill: color-mix(in oklab, var(--accent) 10%, var(--anatomy-face));
+}
+
+.tt-link {
+  fill: none;
+  stroke: var(--anatomy-mid);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+
+.tt-seg rect {
+  fill: var(--anatomy-mid);
+  transition: fill 0.3s;
+}
+
+.tt-seg[data-cost] rect {
+  fill: var(--accent);
+}
+
+.tt-seg[data-on] rect {
+  stroke: var(--anatomy-strong);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 5px var(--accent));
+}
+
+.tt-t {
+  font: 9.5px var(--anatomy-mono);
+}
+
+.tt-via {
+  font: 700 9px var(--anatomy-mono);
+  fill: var(--accent) !important;
+}
+
+/* hybrid */
+.hy-dec {
+  fill: color-mix(in oklab, var(--accent) 20%, var(--anatomy-card));
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.hy-path path {
+  fill: none;
+  stroke: var(--anatomy-mid);
+  stroke-width: 1.6;
+}
+
+.hy-path rect {
+  fill: var(--anatomy-face);
+  stroke: var(--anatomy-mid);
+}
+
+.hy-path.lit path {
+  stroke: var(--accent);
+  stroke-width: 2.4;
+  stroke-dasharray: 6 5;
+  animation: iso-flow 1.2s linear infinite;
+}
+
+.hy-path.lit rect {
+  fill: color-mix(in oklab, var(--accent) 26%, var(--anatomy-card));
+  stroke: var(--accent);
+}
+
+.hy-path.dim {
+  opacity: 0.35;
+}
+
+/* scheduler */
+.sch-row {
+  fill: var(--anatomy-face);
+  stroke: var(--line);
+}
+
+.sch-run {
+  fill: var(--anatomy-mid);
+}
+
+.sch-run[data-vm="0"] {
+  fill: var(--accent);
+}
+
+.sch-run[data-vm="1"] {
+  fill: var(--anatomy-blue);
+}
+
+.sch-run[data-vm="2"] {
+  fill: var(--anatomy-green);
+}
+
+.sch-run[data-vm="idle"] {
+  fill: var(--anatomy-face);
+  stroke: var(--line);
+  stroke-dasharray: 2 2;
+}
+
+.sch-halt,
+.sch-to {
+  font: 700 8.5px var(--anatomy-mono);
+}
+
+.sch-halt {
+  fill: var(--anatomy-green) !important;
+}
+
+.sch-to {
+  fill: var(--anatomy-red) !important;
+}
+
+/* paging calculator */
+.pc-page {
+  fill: color-mix(in oklab, var(--accent) 30%, var(--anatomy-card));
+  stroke: var(--accent);
+}
+
+.pc-off {
+  fill: color-mix(in oklab, var(--anatomy-blue) 25%, var(--anatomy-card));
+  stroke: var(--anatomy-blue);
+}
+
+.calc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  font-size: 14px;
+}
+
+.calc b {
+  text-align: right;
+  font-family: var(--anatomy-mono);
+  color: var(--anatomy-strong) !important;
+}
+
+/* translation flow */
+.tf-split {
+  stroke: var(--line);
+  stroke-dasharray: 5 5;
+}
+
+.tf-edge {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-dasharray: 6 4;
+  animation: iso-flow 1.4s linear infinite;
+}
+
+.tf-node rect {
+  fill: var(--anatomy-face);
+  stroke: var(--anatomy-mid);
+  transition: fill 0.3s, stroke 0.3s;
+}
+
+.tf-node {
+  opacity: 0.45;
+  transition: opacity 0.3s;
+}
+
+.tf-node[data-on] {
+  opacity: 1;
+}
+
+.tf-node[data-on] rect {
+  fill: color-mix(in oklab, var(--accent) 24%, var(--anatomy-card));
+  stroke: var(--accent);
+}
+
+.tf-node[data-on][data-kind="bad"] rect {
+  fill: color-mix(in oklab, var(--anatomy-red) 25%, var(--anatomy-card));
+  stroke: var(--anatomy-red);
+}
+
+.tf-node[data-on][data-kind="end"] rect {
+  fill: color-mix(in oklab, var(--anatomy-green) 22%, var(--anatomy-card));
+  stroke: var(--anatomy-green);
+}
+
+.tf-node .dg-t {
+  font-size: 11px;
+}
+
+.dg-node[data-cow] {
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
+}
+
+/* three spaces */
+.ts-vm {
+  fill: color-mix(in oklab, var(--accent) 6%, transparent);
+  stroke: var(--line);
+}
+
+.ts-page {
+  cursor: pointer;
+}
+
+.ts-page rect,
+.ts-frame rect {
+  fill: var(--anatomy-face);
+  stroke: var(--anatomy-mid);
+  transition: fill 0.3s, stroke 0.3s;
+}
+
+.ts-frame.real rect {
+  stroke: color-mix(in oklab, var(--anatomy-green) 60%, var(--anatomy-mid));
+}
+
+.ts-page text,
+.ts-frame text {
+  font: 10px var(--anatomy-mono);
+}
+
+.ts-page[data-on] rect,
+.ts-frame[data-on] rect {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.ts-page[data-on] text,
+.ts-frame[data-on] text {
+  fill: var(--anatomy-page) !important;
+  font-weight: 700;
+}
+
+.ts-page:focus-visible {
+  outline: none;
+}
+
+.ts-link {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.4;
+}
+
+.ts-link.shadow {
+  stroke-dasharray: 3 5;
+  stroke: var(--anatomy-red);
+}
+
+/* nested walk */
+.nw-cell rect {
+  fill: var(--anatomy-face);
+  stroke: var(--line);
+  transition: fill 0.2s;
+}
+
+.nw-cell text {
+  font: 11px var(--anatomy-mono);
+}
+
+.nw-cell[data-on][data-kind="nested"] rect {
+  fill: color-mix(in oklab, var(--anatomy-blue) 45%, var(--anatomy-card));
+}
+
+.nw-cell[data-on][data-kind="guest"] rect {
+  fill: color-mix(in oklab, var(--accent) 55%, var(--anatomy-card));
+}
+
+.nw-cell[data-on][data-kind="data"] rect {
+  fill: color-mix(in oklab, var(--anatomy-green) 55%, var(--anatomy-card));
+}
+
+.nw-cell[data-now] rect {
+  stroke: var(--anatomy-strong);
+  stroke-width: 2;
+}
+
+/* shadow vs nested */
+.svn-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+
+.svn-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.svn-col {
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.svn-col[data-k="sh"] {
+  box-shadow: inset 4px 0 0 var(--anatomy-red), 0 0 0 1px var(--line);
+}
+
+.svn-col[data-k="ne"] {
+  box-shadow: inset 4px 0 0 var(--anatomy-blue), 0 0 0 1px var(--line);
+}
+
+.svn-col h4 {
+  margin: 0 0 8px;
+  color: var(--anatomy-strong);
+  font-family: var(--font-display), sans-serif;
+}
+
+.svn-col p {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.svn-num {
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+}
+
+.svn-num b {
+  font: 700 26px var(--font-display), sans-serif;
+  color: var(--anatomy-strong);
+}
+
+/* balloon */
+.bl-cap {
+  fill: var(--anatomy-face);
+  stroke: var(--line);
+}
+
+.bl-active {
+  fill: var(--accent);
+}
+
+.bl-cache {
+  fill: color-mix(in oklab, var(--accent) 35%, var(--anatomy-card));
+}
+
+.bl-balloon {
+  fill: color-mix(in oklab, var(--anatomy-blue) 55%, var(--anatomy-card));
+  stroke: var(--anatomy-blue);
+}
+
+.bl-swap {
+  fill: transparent;
+  stroke: var(--anatomy-red);
+  stroke-dasharray: 4 3;
+}
+
+.bl-hv {
+  fill: var(--anatomy-mid);
+}
+
+.bl-vm[data-vm="0"] {
+  fill: color-mix(in oklab, var(--accent) 75%, var(--anatomy-card));
+}
+
+.bl-vm[data-vm="1"] {
+  fill: color-mix(in oklab, var(--accent) 50%, var(--anatomy-card));
+}
+
+.bl-vm[data-vm="2"] {
+  fill: color-mix(in oklab, var(--accent) 30%, var(--anatomy-card));
+}
+
+.bl-active,
+.bl-cache,
+.bl-balloon,
+.bl-swap,
+.bl-vm {
+  transition: x 0.4s var(--anatomy-ease), width 0.4s var(--anatomy-ease);
+}
+
+/* disks */
+.pv-on {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.pv-off {
+  stroke: var(--anatomy-lo);
+  stroke-width: 1.4;
+}
+
+.pv-data {
+  stroke: var(--anatomy-mid);
+  stroke-dasharray: 3 4;
+  stroke-width: 1.2;
+}
+
+.fi-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.fi-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 6px;
+  font-size: 13.5px;
+}
+
+.fi-table th {
+  padding: 8px;
+  color: var(--anatomy-strong);
+  font-weight: 600;
+  text-align: center;
+  border-radius: 8px;
+  background: var(--anatomy-face);
+}
+
+.fi-table tbody th {
+  text-align: left;
+  font-size: 12.5px;
+}
+
+.fi-table .fi-corner {
+  font: 10.5px/1.5 var(--anatomy-mono);
+  color: var(--anatomy-muted);
+  background: none;
+}
+
+.fi-table td button {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-strong);
+  font: 600 13px var(--font-sans), sans-serif;
+  cursor: pointer;
+  transition: background 0.25s, box-shadow 0.25s, transform 0.25s var(--anatomy-ease);
+}
+
+.fi-table td[data-on] button {
+  background: color-mix(in oklab, var(--accent) 32%, var(--anatomy-card));
+  box-shadow: 0 0 0 2px var(--accent);
+  transform: scale(1.03);
+}
+
+.fi-detail {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 40%, var(--line));
+  font-size: 14px;
+}
+
+.fi-detail strong {
+  color: var(--anatomy-strong);
+  font-family: var(--font-display), sans-serif;
+  font-size: 17px;
+}
+
+.fi-detail code {
+  font: 11.5px var(--anatomy-mono);
+  color: var(--accent);
+  word-break: break-word;
+}
+
+.fi-detail p {
+  margin: 0;
+}
+
+.fi-sub {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  color: var(--anatomy-text);
+}
+
+.fi-grids {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+}
+
+.fi-props {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.fi-props th,
+.fi-props td {
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.fi-props thead th {
+  font: 700 12px var(--anatomy-mono);
+  color: var(--accent);
+  text-align: center;
+}
+
+.fi-props tbody th {
+  font-weight: 400;
+  text-align: left;
+  color: var(--anatomy-text);
+}
+
+.fi-props td {
+  width: 56px;
+  text-align: center;
+}
+
+.fi-props td button {
+  width: 38px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-strong);
+  font: 700 15px var(--anatomy-mono);
+  cursor: pointer;
+}
+
+.fi-props td button[data-state="ok"] {
+  background: color-mix(in oklab, var(--anatomy-green) 30%, var(--anatomy-card));
+  box-shadow: 0 0 0 1.5px var(--anatomy-green);
+}
+
+.fi-props td button[data-state="bad"] {
+  background: color-mix(in oklab, var(--anatomy-red) 28%, var(--anatomy-card));
+  box-shadow: 0 0 0 1.5px var(--anatomy-red);
+}
+
+.fi-score {
+  align-self: center;
+  font: 700 13px var(--anatomy-mono);
+  color: var(--accent);
+}
+
+/* snapshots */
+.vo-curve {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.fz-cut {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 5 4;
+}
+
+.fz-cut.frozen {
+  stroke: var(--anatomy-green);
+}
+
+.snap-ctl {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.snap-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 4px;
+  max-width: 560px;
+}
+
+.snap-grid button {
+  padding: 7px 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-strong);
+  font: 600 12px var(--anatomy-mono);
+  cursor: pointer;
+}
+
+.snap-grid button:hover {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.snap-ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.snap-probe {
+  transition: transform 0.4s var(--anatomy-ease);
+  pointer-events: none;
+}
+
+.snap-probe circle {
+  fill: var(--anatomy-card);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.snap-probe circle[data-found] {
+  fill: var(--accent);
+}
+
+.snap-probe path {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+/* network */
+.nm-cloud {
+  fill: color-mix(in oklab, var(--anatomy-blue) 16%, var(--anatomy-card));
+  stroke: var(--anatomy-blue);
+}
+
+.nm-host {
+  fill: color-mix(in oklab, var(--accent) 5%, transparent);
+  stroke: var(--line);
+  stroke-dasharray: 6 5;
+}
+
+.nm-slirp {
+  fill: color-mix(in oklab, var(--accent) 9%, transparent);
+  stroke: color-mix(in oklab, var(--accent) 50%, transparent);
+}
+
+.nm-r {
+  fill: var(--anatomy-page) !important;
+  font-weight: 700;
+}
+
+.nm-cut {
+  stroke: var(--anatomy-red);
+  stroke-width: 3;
+}
+
+.dg-wire[data-off] {
+  opacity: 0.2;
+}
+
+.nm-pkt {
+  fill: var(--anatomy-green);
+  stroke: var(--anatomy-card);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px var(--anatomy-green));
+}
+
+.nm-pkt.bad {
+  fill: var(--anatomy-red);
+  filter: drop-shadow(0 0 5px var(--anatomy-red));
+}
+
+.vl-group rect {
+  fill: color-mix(in oklab, var(--accent) 12%, var(--anatomy-card));
+  stroke: var(--line);
+  transition: fill 0.3s, stroke 0.3s;
+}
+
+.vl-group[data-on] rect {
+  fill: color-mix(in oklab, var(--accent) 40%, var(--anatomy-card));
+  stroke: var(--accent);
+}
+
+.vl-link {
+  fill: none;
+  stroke: var(--anatomy-mid);
+  stroke-width: 1.4;
+  transition: stroke 0.3s, stroke-width 0.3s;
+}
+
+.vl-link.trunk {
+  stroke-width: 3;
+}
+
+.vl-link[data-on] {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+  animation: iso-flow 1.2s linear infinite;
+}
+
+.vl-sw rect {
+  fill: var(--anatomy-face);
+  stroke: var(--anatomy-mid);
+}
+
+.vl-sw[data-on] rect {
+  stroke: var(--accent);
+  fill: color-mix(in oklab, var(--accent) 20%, var(--anatomy-card));
+}
+
+.dg-svg circle.dg-node[data-on] {
+  stroke: var(--accent);
+  fill: color-mix(in oklab, var(--accent) 25%, var(--anatomy-card));
+}
+
+.vl-tag rect {
+  fill: var(--accent);
+}
+
+.vl-tag text {
+  font: 700 10.5px var(--anatomy-mono);
+  fill: var(--anatomy-page) !important;
+}
+
+/* ======================================================================
+   Part III
+   ====================================================================== */
+.wa-on {
+  fill: var(--anatomy-page) !important;
+}
+
+.qil-ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+
+.qil-op {
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--accent) 12%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 60%, var(--line));
+  color: var(--anatomy-strong);
+  text-align: left;
+  cursor: pointer;
+}
+
+.qil-op code {
+  font: 11.5px var(--anatomy-mono);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.qil-op:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.qil-op[data-done] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.qil-dirs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+
+.qil-dir {
+  min-height: 110px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.qil-empty {
+  margin: 0;
+  color: var(--anatomy-muted);
+  font-size: 13px;
+}
+
+.qil-file {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--anatomy-card);
+  box-shadow: inset 3px 0 0 var(--anatomy-mid);
+  font-size: 13px;
+  animation: tb-in 0.4s var(--anatomy-ease);
+}
+
+.qil-file strong {
+  font: 600 12.5px var(--anatomy-mono);
+  color: var(--anatomy-strong);
+}
+
+.qil-file[data-kind="base"] {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.qil-file[data-kind="clone"] {
+  box-shadow: inset 3px 0 0 var(--anatomy-blue);
+}
+
+.qil-file[data-kind="full"] {
+  box-shadow: inset 3px 0 0 var(--anatomy-green);
+}
+
+.qil-file[data-broken] {
+  box-shadow: inset 3px 0 0 var(--anatomy-red), 0 0 0 1px var(--anatomy-red);
+}
+
+.qil-out {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--anatomy-page) 70%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--line);
+  font: 12px/1.55 var(--anatomy-mono);
+  color: var(--anatomy-strong);
+  white-space: pre-wrap;
+}
+
+.ca-cmd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--anatomy-page) 70%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.ca-tok {
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--anatomy-text);
+  font: 13px var(--anatomy-mono);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.ca-tok[data-flag] {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.ca-tok[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--anatomy-page);
+}
+
+.sl-fw {
+  fill: var(--anatomy-red);
+  transition: fill 0.3s;
+}
+
+.sl-fw.open {
+  fill: var(--anatomy-green);
+}
+
+.br-bar {
+  fill: color-mix(in oklab, var(--accent) 40%, var(--anatomy-card));
+  stroke: var(--accent);
+}
+
+.br-t {
+  fill: var(--anatomy-strong) !important;
+  font-weight: 700;
+}
+
+.br-vm {
+  animation: tb-in 0.5s var(--anatomy-ease);
+}
+
+.pw-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.pw-table th,
+.pw-table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.pw-table thead th {
+  font: 600 11px var(--anatomy-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.pw-table tbody th {
+  color: var(--anatomy-strong);
+}
+
+.pw-table code {
+  font: 12px var(--anatomy-mono);
+}
+
+/* builder */
+.qb-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.qb-form fieldset {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.qb-form fieldset:last-child {
+  grid-column: 1 / -1;
+}
+
+.qb-form legend {
+  float: left;
+  margin-bottom: 4px;
+  font: 700 12px var(--anatomy-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.qb-form label {
+  display: grid;
+  gap: 3px;
+  font-size: 12.5px;
+  color: var(--anatomy-text);
+}
+
+.qb-form input,
+.qb-form select,
+.fc-sel select {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--anatomy-card);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-strong);
+  font: 13px var(--anatomy-mono);
+}
+
+.qb-form input:focus-visible,
+.qb-form select:focus-visible,
+.fc-sel select:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.qb-check {
+  display: flex !important;
+  align-items: center;
+  gap: 6px !important;
+  font-size: 13px;
+  color: var(--anatomy-text);
+}
+
+.qb-check input {
+  accent-color: var(--accent);
+  box-shadow: none !important;
+}
+
+.qb-nic {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 4px;
+  align-items: center;
+}
+
+.qb-nic-n {
+  font: 700 12px var(--anatomy-mono);
+  color: var(--anatomy-strong);
+}
+
+.qb-nic select,
+.qb-nic input {
+  padding: 5px 4px;
+  font-size: 11.5px;
+}
+
+.qb-nic .btn {
+  padding: 4px 8px;
+}
+
+.qb-warn {
+  margin: 12px 0 0;
+  padding: 10px 14px 10px 28px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--anatomy-red) 12%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--anatomy-red) 55%, transparent);
+  font-size: 14px;
+}
+
+/* challenges */
+.ch {
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--anatomy-card);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 45%, var(--line));
+}
+
+.ch-list {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding-left: 22px;
+}
+
+.ch-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.ch-item[data-done] {
+  box-shadow: inset 3px 0 0 var(--anatomy-green), 0 0 0 1px var(--line);
+}
+
+.ch-item[data-done] .ch-head span {
+  color: var(--anatomy-muted);
+  text-decoration: line-through;
+}
+
+.ch-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--anatomy-strong);
+  cursor: pointer;
+}
+
+.ch-head input {
+  margin-top: 5px;
+  accent-color: var(--anatomy-green);
+}
+
+.ch-item details {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.ch-item summary {
+  cursor: pointer;
+  color: var(--accent);
+  font: 600 12px var(--anatomy-mono);
+}
+
+.ch-item details p {
+  margin: 6px 0 0;
+}
+
+.fe-code {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--anatomy-page) 70%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--line);
+  font: 12.5px var(--anatomy-mono);
+  color: var(--anatomy-strong);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ======================================================================
+   Extras: compare tabs, test bank, flashcards, cheat sheet
+   ====================================================================== */
+.cmp-tabs {
+  gap: 6px;
+}
+
+.tb,
+.fc {
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--anatomy-card);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 45%, var(--line));
+}
+
+.tb-intro {
+  margin: 4px 0 14px;
+  font-size: 15px;
+}
+
+.tb-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.tb-topics button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-text);
+  font: 12.5px var(--font-sans), sans-serif;
+  cursor: pointer;
+}
+
+.tb-topics button b {
+  font: 700 11px var(--anatomy-mono);
+  color: var(--accent);
+}
+
+.tb-topics button span {
+  font: 10.5px var(--anatomy-mono);
+  color: var(--anatomy-muted);
+}
+
+.tb-topics button[aria-pressed="true"] {
+  background: color-mix(in oklab, var(--accent) 28%, var(--anatomy-card));
+  box-shadow: 0 0 0 1.5px var(--accent);
+  color: var(--anatomy-strong);
+}
+
+.tb-modes,
+.tb-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tb-nav {
+  margin-top: 14px;
+}
+
+.tb-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 6px 0 14px;
+}
+
+.tb-bar button {
+  width: 16px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: pointer;
+}
+
+.tb-bar button[data-state="done"] {
+  background: var(--anatomy-mid);
+}
+
+.tb-bar button[data-state="ok"] {
+  background: var(--anatomy-green);
+}
+
+.tb-bar button[data-state="bad"] {
+  background: var(--anatomy-red);
+}
+
+.tb-bar button[data-on] {
+  box-shadow: 0 0 0 2px var(--anatomy-strong);
+}
+
+.tb-q .chip {
+  font: 11px var(--anatomy-mono);
+  color: var(--accent);
+}
+
+.tb-q > p:first-of-type {
+  margin: 10px 0;
+  color: var(--anatomy-strong);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.quiz-options button[data-state="pick"] {
+  background: color-mix(in oklab, var(--accent) 25%, var(--anatomy-card));
+  box-shadow: 0 0 0 1.5px var(--accent);
+  color: var(--anatomy-strong);
+}
+
+.tb-result {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--accent) 14%, var(--anatomy-card));
+  font-size: 15px;
+}
+
+.tb-result b {
+  font: 700 22px var(--font-display), sans-serif;
+  color: var(--accent);
+}
+
+.fc-sel select {
+  width: min(320px, 62vw);
+}
+
+.fc-sel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 12px var(--anatomy-mono);
+  color: var(--anatomy-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fc-card {
+  display: block;
+  width: 100%;
+  max-width: 620px;
+  height: 260px;
+  margin: 16px auto 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  perspective: 1200px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.fc-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+  border-radius: 20px;
+}
+
+.fc-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.7s var(--anatomy-ease);
+}
+
+.fc-card[data-flip] .fc-inner {
+  transform: rotateY(180deg);
+}
+
+.fc-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 20px;
+  backface-visibility: hidden;
+  text-align: center;
+  background: radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var(--accent) 28%, transparent), transparent 60%), var(--anatomy-face);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 55%, var(--line)), 0 24px 50px -30px var(--accent);
+}
+
+.fc-back {
+  transform: rotateY(180deg);
+  background: radial-gradient(120% 120% at 100% 100%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 60%), var(--anatomy-face);
+}
+
+.fc-topic {
+  font: 600 11px var(--anatomy-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.fc-text {
+  color: var(--anatomy-strong);
+  font: 700 clamp(22px, 4vw, 32px) / 1.15 var(--font-display), sans-serif;
+}
+
+.fc-text.small {
+  font: 500 17px/1.5 var(--font-sans), sans-serif;
+}
+
+.fc-hint {
+  font: 11px var(--anatomy-mono);
+  color: var(--anatomy-muted);
+}
+
+.cheat {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: 14px;
+}
+
+.cheat-traps {
+  margin-top: 20px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--anatomy-red) 14%, var(--anatomy-card)), var(--anatomy-card));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--anatomy-red) 50%, transparent);
+}
+
+.cheat-traps h3 {
+  margin: 0 0 10px;
+  color: var(--anatomy-strong);
+  font-family: var(--font-display), sans-serif;
+}
+
+.cheat-traps ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+@media (max-width: 760px) {
+  .emu-grid,
+  .bt-grid,
+  .fi-wrap,
+  .svn-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .snap-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .qb-nic {
+    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .hero-chips {
+    margin-top: -32px;
+  }
+}
