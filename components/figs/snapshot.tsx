@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as k from "../iso/iso-kit";
 import { Dots, FaceText, Line, Solid, Wire } from "../iso/react/draw";
+import { useShow } from "../diagrams/kit";
 import { Bench, Choice, Figure, fit } from "./common";
 
 const COLS = 3;
@@ -171,11 +172,22 @@ export function SnapshotFigure() {
     setCmd("qemu-img snapshot -l disco.qcow2");
   };
 
+  useShow("snap", (key) => {
+    if (key === "read") (setAct("r"), read(0));
+    if (key === "write") (setAct("w"), write(4));
+    if (key === "snap") snapshot();
+    if (key === "revert") {
+      const last = layers.map((l) => !!l.snap).lastIndexOf(true);
+      if (last >= 0) revert(last);
+    }
+    if (key === "delete" && layers.length > 2) remove(1);
+  });
   const frozen = layers.filter((l) => l.snap);
   const probeAt = probe ? k.iso(cellTop(xOf(probe.at), probe.b, probe.found ? TOP + 4 : TOP + 14), P) : null;
 
   return (
     <Figure
+      ns="snap"
       fig="Fig 3"
       title="Snapshots copy-on-write"
       hint="Escribe, lee, congela y vuelve atrás"

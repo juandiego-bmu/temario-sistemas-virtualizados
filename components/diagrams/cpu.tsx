@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Choice } from "../figs/common";
-import { Diagram, Slider, Steps, useSteps } from "./kit";
+import { Diagram, Slider, Steps, useShow, useSteps } from "./kit";
 
 /* ------------------------------------------------------------------ */
 /* Emulator: the interpreter loop of the slides, one guest instruction at a time */
@@ -88,9 +88,14 @@ export function EmulatorStepper() {
   const [sc, setSc] = React.useState<keyof typeof SCENARIOS>("syscall");
   const { mem, steps } = SCENARIOS[sc];
   const { step, playing, play, go } = useSteps(steps.length, 2200);
+  useShow("emu", (key) => {
+    if (key in SCENARIOS) setSc(key as keyof typeof SCENARIOS);
+    go(0);
+    play();
+  });
   const s = steps[Math.min(step, steps.length - 1)];
   return (
-    <figure className="dg dg-wide emu reveal">
+    <figure className="dg dg-wide emu reveal" data-ns="emu">
       <figcaption className="dg-head">
         <span className="dg-kicker">Emulación</span>
         <strong>El intérprete de CPU, paso a paso</strong>
@@ -180,6 +185,11 @@ export function BinaryTranslationStepper() {
   const [sc, setSc] = React.useState<"priv" | "flow">("priv");
   const total = sc === "priv" ? BT_BLOCK.length : BT_CHAIN.length;
   const { step, playing, play, go } = useSteps(total, 2000);
+  useShow("bt", (key) => {
+    setSc(key === "flow" ? "flow" : "priv");
+    go(0);
+    play();
+  });
   let guest: { text: string; on: boolean; kind?: string }[];
   let cache: { text: string; on: boolean; kind?: string }[];
   let note: React.ReactNode;
@@ -198,7 +208,7 @@ export function BinaryTranslationStepper() {
     note = c.note;
   }
   return (
-    <figure className="dg bt reveal">
+    <figure className="dg bt reveal" data-ns="bt">
       <figcaption className="dg-head">
         <span className="dg-kicker">Runtime binary translation</span>
         <strong>Del código guest a la Translation Cache</strong>
@@ -252,59 +262,65 @@ export function BinaryTranslationStepper() {
 type Lane = 0 | 1 | 2 | 3;
 interface Seg {
   lane: Lane;
-  text: string;
   via?: string;
   cost?: "trap" | "exit";
+  text: string;
 }
 
-const LANES = ["Usuario", "Kernel (guest)", "Hipervisor", "Hardware"];
-
-const SEQ: Record<string, Seg[]> = {
+const SEQ: Record<"real" | "te" | "hw", Seg[]> = {
   real: [
-    { lane: 0, text: "código usuario" },
-    { lane: 1, text: "kernel (PRIV)", via: "INT" },
-    { lane: 3, text: "E/S", via: "IN/OUT" },
-    { lane: 1, text: "kernel" },
-    { lane: 0, text: "código usuario", via: "IRET" },
+    { lane: 0, text: "El programa de usuario se ejecuta en modo usuario." },
+    { lane: 1, via: "INT", text: "INT: el SO real entra en modo kernel (privilegiado)." },
+    { lane: 3, via: "I/O", text: "El kernel hace IN/OUT directamente sobre el controlador." },
+    { lane: 1, text: "El kernel termina la llamada al sistema." },
+    { lane: 0, via: "IRET", text: "IRET: vuelta a modo usuario. Ninguna intervención de un hipervisor." },
   ],
   te: [
-    { lane: 0, text: "código usuario" },
-    { lane: 2, text: "emula paso a kernel", via: "INT", cost: "trap" },
-    { lane: 1, text: "kernel DEPRIV" },
-    { lane: 2, text: "emula ctrl. E/S", via: "IN/OUT", cost: "trap" },
-    { lane: 3, text: "E/S real" },
-    { lane: 2, text: "fin emulación" },
-    { lane: 1, text: "kernel DEPRIV" },
-    { lane: 2, text: "emula vuelta a usuario", via: "IRET", cost: "trap" },
-    { lane: 0, text: "código usuario" },
+    { lane: 0, text: "El programa de usuario del guest se ejecuta directamente." },
+    { lane: 2, via: "INT", cost: "trap", text: "INT en modo usuario real → TRAP. El hipervisor emula el paso a modo kernel del guest." },
+    { lane: 1, text: "El kernel del guest se ejecuta desprivilegiado (en modo usuario real)." },
+    { lane: 2, via: "I/O", cost: "trap", text: "IN/OUT es privilegiada → TRAP. El hipervisor emula el controlador de E/S…" },
+    { lane: 3, text: "…y hace la E/S real si hace falta." },
+    { lane: 2, text: "Termina la emulación." },
+    { lane: 1, text: "Vuelve al kernel del guest." },
+    { lane: 2, via: "IRET", cost: "trap", text: "IRET también es privilegiada → TRAP: el hipervisor emula la vuelta a modo usuario." },
+    { lane: 0, text: "El programa sigue. Han hecho falta 3 traps." },
   ],
   hw: [
-    { lane: 0, text: "código usuario" },
-    { lane: 1, text: "kernel PSEUDO-PRIV", via: "INT (sin exit)" },
-    { lane: 2, text: "emula ctrl. E/S", via: "IN/OUT", cost: "exit" },
-    { lane: 3, text: "E/S real" },
-    { lane: 2, text: "vmrun" },
-    { lane: 1, text: "kernel guest", via: "vmrun" },
-    { lane: 0, text: "código usuario", via: "IRET (sin exit)" },
+    { lane: 0, text: "El programa de usuario del guest se ejecuta (modo guest)." },
+    { lane: 1, via: "INT", text: "INT sin exit: el guest entra en su kernel en modo pseudoprivilegiado." },
+    { lane: 2, via: "I/O", cost: "exit", text: "IN/OUT → EXIT. El hipervisor lee el diagnóstico del VMCB (puerto, tamaño, dirección) y emula el controlador." },
+    { lane: 3, text: "E/S real." },
+    { lane: 2, text: "El hipervisor ejecuta vmrun." },
+    { lane: 1, via: "vmrun", text: "vmrun: vuelta al kernel del guest con el estado del VMCB." },
+    { lane: 0, via: "IRET", text: "IRET sin exit. Ha bastado 1 exit." },
   ],
 };
 
 export function TrapTimeline() {
   const [mode, setMode] = React.useState<keyof typeof SEQ>("te");
   const seq = SEQ[mode];
-  const { step, playing, play, go } = useSteps(seq.length, 1100);
+  const { step, playing, play, go } = useSteps(seq.length, 1500);
+  useShow("trap", (key) => {
+    if (!(key in SEQ)) return;
+    setMode(key as keyof typeof SEQ);
+    go(0);
+    play();
+  });
+  const lanes = ["Usuario", mode === "real" ? "Kernel (PRIV)" : "Kernel guest", "Hipervisor", "Hardware"];
   const X0 = 112;
-  const W = (552 - X0) / seq.length;
-  const laneY = (l: number) => 40 + l * 46;
-  const shown = seq.slice(0, step + 1);
-  const traps = shown.filter((s) => s.cost).length;
-  const total = seq.filter((s) => s.cost).length;
+  const W = (550 - X0) / seq.length;
+  const mid = (l: number) => 26 + l * 46;
+  const total = seq.filter((x) => x.cost).length;
+  const done = seq.slice(0, step + 1).filter((x) => x.cost).length;
+  const unit = mode === "hw" ? "exits" : "traps";
   return (
     <Diagram
+      ns="trap"
       title="Una llamada al sistema con una E/S"
       kicker="Trap & emulate vs hardware"
       label="Línea temporal con cuatro carriles: usuario, kernel del guest, hipervisor y hardware. Con trap & emulate la llamada provoca tres traps; con soporte hardware, un solo exit."
-      viewBox="0 0 560 222"
+      viewBox="0 0 560 190"
       wide
       controls={
         <>
@@ -325,44 +341,63 @@ export function TrapTimeline() {
         </>
       }
       note={
-        mode === "real" ? (
-          <>Sin virtualizar: el kernel corre en modo privilegiado y habla con el hardware directamente. <b>0 intervenciones</b> del hipervisor.</>
-        ) : mode === "te" ? (
-          <>El kernel del guest corre desprivilegiado: <b>INT, IN/OUT e IRET provocan un trap cada una</b>, y el hipervisor emula el cambio de modo, el controlador y la vuelta. Mucho overhead, más los shadow registers.</>
-        ) : (
-          <>Con el modo guest pseudoprivilegiado, la llamada al sistema y el IRET los ejecuta el propio guest. <b>Solo la E/S provoca un exit</b>; el hipervisor la emula y vuelve con <code>vmrun</code> cargando el estado del VMCB.</>
-        )
+        <>
+          <p className="tt-sum">
+            {mode === "real" ? (
+              <>Sin virtualizar el kernel corre privilegiado y habla con el hardware: <b>0 intervenciones</b>.</>
+            ) : (
+              <>
+                Llevamos <b>{done} de {total} {unit}</b>. {mode === "te" ? "El guest corre desprivilegiado: INT, IN/OUT e IRET provocan un trap cada una." : "Con el modo guest, solo la E/S sale al hipervisor."}
+              </>
+            )}{" "}
+            Pulsa un paso para ir a él.
+          </p>
+          <ol className="tt-list">
+            {seq.map((x, i) => (
+              <li key={i} data-state={i < step ? "past" : i === step ? "now" : undefined} data-cost={x.cost}>
+                <button type="button" onClick={() => go(i)}>
+                  {x.via ? (
+                    <span className="tt-tag">
+                      {x.via}
+                      {x.cost ? ` → ${x.cost.toUpperCase()}` : ""}
+                    </span>
+                  ) : null}
+                  {x.text}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </>
       }
     >
-      {LANES.map((l, i) => (
-        <g key={l} className="tt-lane" data-off={mode === "real" && i === 2 ? "" : undefined}>
-          <rect x={0} y={laneY(i) - 20} width={560} height={40} rx={6} />
-          <text className="dg-s" x={8} y={laneY(i) + 4}>
-            {mode === "hw" && i === 1 ? "Kernel (modo guest)" : l}
+      {lanes.map((l, i) => (
+        <g key={i} className="tt-lane" data-off={mode === "real" && i === 2 ? "" : undefined}>
+          <rect x={0} y={mid(i) - 20} width={560} height={40} rx={6} />
+          <text className="dg-s" x={10} y={mid(i) + 4}>
+            {l}
           </text>
         </g>
       ))}
-      {shown.map((s, i) => {
-        const x = X0 + i * W;
-        const prev = i ? shown[i - 1] : null;
+      {seq.map((x, i) => {
+        const cx = X0 + i * W;
+        const prev = i ? seq[i - 1] : null;
+        const state = i < step ? "past" : i === step ? "now" : "next";
+        const w = x.via ? x.via.length * 6.4 + 14 : 0;
         return (
-          <g key={i} className="tt-seg" data-cost={s.cost} data-on={i === step ? "" : undefined}>
-            {prev ? <path className="tt-link" d={`M${x - 6} ${laneY(prev.lane) - 6} L${x} ${laneY(s.lane) - 6}`} /> : null}
-            {s.via && prev ? (
-              <text className="tt-via" x={x - 3} y={(laneY(prev.lane) + laneY(s.lane)) / 2 - 2} textAnchor="end">
-                {s.via}
-              </text>
+          <g key={i} className="tt-seg" data-state={state} data-cost={x.cost}>
+            {prev ? <path className="tt-link" d={`M${cx} ${mid(prev.lane)} L${cx} ${mid(x.lane)}`} /> : null}
+            <rect className="tt-block" x={cx + 3} y={mid(x.lane) - 7} width={W - 6} height={14} rx={4} />
+            {x.via && prev ? (
+              <g className="tt-pill">
+                <rect x={cx - w / 2} y={(mid(prev.lane) + mid(x.lane)) / 2 - 8} width={w} height={16} rx={8} />
+                <text x={cx} y={(mid(prev.lane) + mid(x.lane)) / 2 + 3.5} textAnchor="middle">
+                  {x.via}
+                </text>
+              </g>
             ) : null}
-            <rect x={x} y={laneY(s.lane) - 12} width={W - 8} height={12} rx={4} />
-            <text className="tt-t" x={x + (W - 8) / 2} y={laneY(s.lane) + 12} textAnchor="middle">
-              {s.text}
-            </text>
           </g>
         );
       })}
-      <text className="dg-kick" x={552} y={14} textAnchor="end">
-        {mode === "hw" ? "exits" : "traps"}: {traps} / {total}
-      </text>
     </Diagram>
   );
 }
@@ -372,9 +407,11 @@ export function TrapTimeline() {
 
 export function HybridFlow() {
   const [kernel, setKernel] = React.useState(true);
+  useShow("hybrid", (key) => setKernel(key !== "u"));
   const on = (k: boolean) => (k === kernel ? "lit" : "dim");
   return (
     <Diagram
+      ns="hybrid"
       title="Implementación híbrida (VMware, 2002)"
       kicker="Teorema 3"
       label="Diagrama de flujo: si se puede usar trap & emulate se ejecuta directamente el código guest; si no, se traduce y se ejecuta en la caché de traducción. Ambos caminos acaban manejando la instrucción privilegiada."
@@ -406,38 +443,38 @@ export function HybridFlow() {
         emulate OK?
       </text>
       <g className={`hy-path ${on(false)}`}>
-        <path d="M190 90 H250" />
-        <text className="dg-s" x={220} y={82} textAnchor="middle">
+        <path d="M190 90 H244" />
+        <text className="dg-s" x={217} y={82} textAnchor="middle">
           sí
         </text>
-        <rect x={250} y={66} width={120} height={48} rx={6} />
-        <text className="dg-t" x={310} y={88} textAnchor="middle">
+        <rect x={244} y={66} width={130} height={48} rx={6} />
+        <text className="dg-t" x={309} y={88} textAnchor="middle">
           Ejecución directa
         </text>
-        <text className="dg-s" x={310} y={104} textAnchor="middle">
-          salta al PC del guest
+        <text className="dg-s" x={309} y={104} textAnchor="middle">
+          al PC del guest
         </text>
-        <path d="M370 90 H420" />
-        <text className="dg-s" x={395} y={82} textAnchor="middle">
+        <path d="M374 90 H420" />
+        <text className="dg-s" x={397} y={82} textAnchor="middle">
           trap
         </text>
       </g>
       <g className={`hy-path ${on(true)}`}>
-        <path d="M110 140 V170 H140" />
-        <text className="dg-s" x={96} y={160} textAnchor="end">
+        <path d="M110 140 V171 H132" />
+        <text className="dg-s" x={100} y={160} textAnchor="end">
           no
         </text>
-        <rect x={140} y={150} width={110} height={42} rx={6} />
-        <text className="dg-t" x={195} y={176} textAnchor="middle">
+        <rect x={132} y={150} width={134} height={42} rx={6} />
+        <text className="dg-t" x={199} y={176} textAnchor="middle">
           Traducción binaria
         </text>
-        <path d="M250 171 H280" />
-        <rect x={280} y={150} width={100} height={42} rx={6} />
-        <text className="dg-t" x={330} y={176} textAnchor="middle">
+        <path d="M266 171 H280" />
+        <rect x={280} y={150} width={106} height={42} rx={6} />
+        <text className="dg-t" x={333} y={176} textAnchor="middle">
           Ejecutar en TC
         </text>
-        <path d="M380 171 H420 V140" />
-        <text className="dg-s" x={404} y={186} textAnchor="middle">
+        <path d="M386 171 H440 V140" />
+        <text className="dg-s" x={412} y={188} textAnchor="middle">
           callout
         </text>
       </g>
@@ -521,12 +558,15 @@ export function SchedulerDiagram() {
   const share = VM_NAMES.map((_, i) => owner.filter((o) => o === i).length);
   const X0 = 70;
   const TW = 19;
+  const top = (i: number) => 8 + i * 48;
+  useShow("sched", (key) => setB(key === "busy" ? "busy" : "inter"));
   return (
     <Diagram
+      ns="sched"
       title="Round-robin entre máquinas virtuales"
       kicker="Multiplexación de la CPU"
       label="Diagrama de Gantt de una CPU física repartida entre tres máquinas virtuales. Una máquina deja la CPU cuando ejecuta HALT o cuando se le acaba el cuanto."
-      viewBox="0 0 560 200"
+      viewBox="0 0 560 194"
       controls={
         <>
           <Slider label="Cuanto" value={quantum} min={1} max={6} onChange={setQuantum} format={(v) => `${v} ticks`} />
@@ -549,37 +589,37 @@ export function SchedulerDiagram() {
     >
       {VM_NAMES.map((name, i) => (
         <g key={name}>
-          <text className="dg-t" x={4} y={34 + i * 40}>
+          <text className="dg-t" x={4} y={top(i) + 11}>
             {name}
           </text>
-          <text className="dg-s" x={4} y={48 + i * 40}>
+          <text className="dg-s" x={4} y={top(i) + 25}>
             {Math.round((share[i] / TICKS) * 100)} % CPU
           </text>
-          <rect className="sch-row" x={X0} y={22 + i * 40} width={TICKS * TW} height={26} rx={4} />
+          <rect className="sch-row" x={X0} y={top(i)} width={TICKS * TW} height={24} rx={4} />
           {owner.map((o, t) =>
             o === i ? (
-              <rect key={t} className="sch-run" data-vm={i} x={X0 + t * TW + 1} y={24 + i * 40} width={TW - 2} height={22} rx={3} />
+              <rect key={t} className="sch-run" data-vm={i} x={X0 + t * TW + 1} y={top(i) + 2} width={TW - 2} height={20} rx={3} />
             ) : null,
           )}
           {why.map((w, t) =>
             w && owner[t] === i ? (
-              <text key={`w${t}`} className={w === "halt" ? "sch-halt" : "sch-to"} x={X0 + t * TW + TW / 2} y={62 + i * 40} textAnchor="middle">
+              <text key={`w${t}`} className={w === "halt" ? "sch-halt" : "sch-to"} x={X0 + t * TW + TW / 2} y={top(i) + 35} textAnchor="middle">
                 {w === "halt" ? "HLT" : "⏱"}
               </text>
             ) : null,
           )}
         </g>
       ))}
-      <text className="dg-s" x={4} y={176}>
+      <text className="dg-s" x={4} y={164}>
         CPU real
       </text>
       {owner.map((o, t) => (
-        <rect key={t} className="sch-run" data-vm={o ?? "idle"} x={X0 + t * TW + 1} y={164} width={TW - 2} height={16} rx={3} />
+        <rect key={t} className="sch-run" data-vm={o ?? "idle"} x={X0 + t * TW + 1} y={152} width={TW - 2} height={16} rx={3} />
       ))}
-      <text className="dg-s" x={X0} y={196}>
+      <text className="dg-s" x={X0} y={186}>
         tiempo →
       </text>
-      <text className="dg-s" x={X0 + TICKS * TW} y={196} textAnchor="end">
+      <text className="dg-s" x={X0 + TICKS * TW} y={186} textAnchor="end">
         {PROF[b].text}
       </text>
     </Diagram>
@@ -591,8 +631,10 @@ export function SchedulerDiagram() {
 
 export function CpuVisibility() {
   const [host, setHost] = React.useState(false);
+  useShow("cpuvis", (key) => setHost(key === "host"));
   return (
     <Diagram
+      ns="cpuvis"
       title="¿Qué CPU ve el guest?"
       kicker="Visibilidad de la CPU"
       label="Dos servidores, uno con CPU nueva y otro con CPU antigua. Con un modelo genérico la máquina virtual se puede migrar a ambos; con la CPU real expuesta, solo a uno igual."
@@ -623,7 +665,7 @@ export function CpuVisibility() {
       <text className="dg-s" x={120} y={58} textAnchor="middle">
         SSE4 · AVX2 · AVX-512
       </text>
-      <rect className="dg-node out" x={50} y={72} width={140} height={54} rx={8} />
+      <rect className="dg-node out" x={30} y={72} width={180} height={54} rx={8} />
       <text className="dg-t" x={120} y={94} textAnchor="middle">
         MV
       </text>

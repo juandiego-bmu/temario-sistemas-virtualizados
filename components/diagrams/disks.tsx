@@ -2,18 +2,20 @@
 
 import * as React from "react";
 import { Choice } from "../figs/common";
-import { Arrow, Box, Diagram } from "./kit";
+import { Arrow, Box, Diagram, useShow } from "./kit";
 
 /** The guest always sees the same SCSI LUN; behind it there is a real volume or a file. */
 export function ScsiDiagram() {
   const [file, setFile] = React.useState(true);
+  useShow("scsi", (key) => setFile(key !== "vol"));
   const lit = [6, 7, 8];
   return (
     <Diagram
+      ns="scsi"
       title="El guest ve un LUN SCSI, no un disco"
       kicker="Virtualización de discos"
       label="Pila del guest: aplicación, sistema de ficheros y driver SCSI, que envía comandos a un LUN de bloques LBA. El hipervisor implementa ese LUN sobre un volumen físico o sobre un fichero."
-      viewBox="0 0 560 250"
+      viewBox="0 0 560 258"
       controls={
         <Choice
           label="El LUN se implementa sobre"
@@ -36,52 +38,54 @@ export function ScsiDiagram() {
       <Box x={14} y={14} w={150} h={34} title="Aplicación" />
       <Box x={14} y={56} w={150} h={34} title="Sistema de ficheros" />
       <Box x={14} y={98} w={150} h={40} title="Driver SCSI estándar" sub="mismo driver siempre" tone="accent" />
-      <text className="dg-kick" x={14} y={154}>
+      <text className="dg-kick" x={14} y={156}>
         SO guest
       </text>
       <Arrow x1={164} y1={118} x2={226} y2={118} />
       <text className="dg-s" x={195} y={110} textAnchor="middle">
         WRITE
       </text>
-      <rect className="dg-node out" x={228} y={20} width={318} height={110} rx={10} />
-      <text className="dg-t" x={240} y={40}>
-        LUN 0 · bloques direccionados por LBA (sin geometría)
+      <rect className="dg-node out" x={228} y={18} width={318} height={112} rx={10} />
+      <text className="dg-t" x={242} y={38}>
+        LUN 0 · bloques LBA
+      </text>
+      <text className="dg-s" x={534} y={38} textAnchor="end">
+        sin geometría
       </text>
       {Array.from({ length: 16 }, (_, i) => (
         <g key={i}>
-          <rect className={lit.includes(i) ? "dg-px hot" : "dg-px"} x={240 + (i % 8) * 37} y={52 + Math.floor(i / 8) * 34} width={33} height={28} rx={3} />
-          <text className="dg-s" x={256 + (i % 8) * 37} y={70 + Math.floor(i / 8) * 34} textAnchor="middle">
+          <rect className={lit.includes(i) ? "dg-px hot" : "dg-px"} x={242 + (i % 8) * 37} y={50 + Math.floor(i / 8) * 36} width={33} height={30} rx={3} />
+          <text className="dg-s" x={258 + (i % 8) * 37} y={70 + Math.floor(i / 8) * 36} textAnchor="middle">
             {i}
           </text>
         </g>
       ))}
       <Arrow x1={387} y1={130} x2={387} y2={168} />
-      <text className="dg-s" x={395} y={152}>
-        hipervisor (emulación SCSI)
+      <text className="dg-s" x={379} y={153} textAnchor="end">
+        hipervisor · emulación SCSI
       </text>
+      <rect className="dg-node" x={228} y={170} width={318} height={70} rx={8} />
       {file ? (
-        <g>
-          <rect className="dg-node" x={250} y={170} width={276} height={66} rx={8} />
-          <text className="dg-t" x={388} y={194} textAnchor="middle">
+        <>
+          <text className="dg-t" x={387} y={192} textAnchor="middle">
             /home/VMs/disk.qcow2
           </text>
-          <text className="dg-s" x={388} y={212} textAnchor="middle">
-            un fichero en el sistema de ficheros del host
+          <text className="dg-s" x={387} y={210} textAnchor="middle">
+            un fichero del sistema de ficheros del host
           </text>
-          <text className="dg-s" x={388} y={228} textAnchor="middle">
-            (el ext4/xfs del hipervisor lo guarda en el disco real)
+          <text className="dg-s" x={387} y={226} textAnchor="middle">
+            (el ext4/xfs del host lo guarda en el disco)
           </text>
-        </g>
+        </>
       ) : (
-        <g>
-          <rect className="dg-node" x={250} y={170} width={276} height={66} rx={8} />
-          <text className="dg-t" x={388} y={196} textAnchor="middle">
+        <>
+          <text className="dg-t" x={387} y={196} textAnchor="middle">
             /dev/sdb · un volumen real entero
           </text>
-          <text className="dg-s" x={388} y={216} textAnchor="middle">
-            el LBA del guest va directo al LBA del volumen
+          <text className="dg-s" x={387} y={216} textAnchor="middle">
+            el LBA del guest va directo al del volumen
           </text>
-        </g>
+        </>
       )}
     </Diagram>
   );
@@ -98,6 +102,7 @@ const KINDS = [
 /** Thick vs thin: when the space is taken and what the first write costs (illustrative numbers). */
 export function ProvisionChart() {
   const [on, setOn] = React.useState<(typeof KINDS)[number]["id"]>("thin");
+  useShow("prov", (key) => KINDS.some((x) => x.id === key) && setOn(key as (typeof KINDS)[number]["id"]));
   const k = KINDS.find((x) => x.id === on)!;
   const bars = [
     ["Crear el disco", k.create],
@@ -106,6 +111,7 @@ export function ProvisionChart() {
   ] as const;
   return (
     <Diagram
+      ns="prov"
       title="Thick (eager / lazy) vs thin"
       kicker="Reserva del espacio"
       label="Dos gráficas ilustrativas: el coste de crear el disco y de escribir, y el espacio ocupado en el datastore a medida que la MV escribe."
@@ -238,7 +244,7 @@ export function FlatIndexMatrix() {
   const right = marks.flat(2).filter((v, i) => v === GRIDS.flatMap((g) => g.rows.flatMap((r) => r.a))[i]).length;
   const totalMarks = GRIDS.reduce((s, g) => s + g.rows.length * 2, 0);
   return (
-    <figure className="dg dg-wide fi reveal">
+    <figure className="dg dg-wide fi reveal" data-ns="fi">
       <figcaption className="dg-head">
         <span className="dg-kicker">Cae en el examen</span>
         <strong>La matriz thin / thick × flat / index</strong>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Choice } from "../figs/common";
-import { Diagram, Slider } from "./kit";
+import { Diagram, Slider, useShow } from "./kit";
 
 const DAYS = 10;
 
@@ -10,6 +10,7 @@ const DAYS = 10;
 export function VolatilityDiagram() {
   const [v, setV] = React.useState(25);
   const [hot, setHot] = React.useState(false);
+  useShow("vol", (key) => (key === "hot" ? (setV(25), setHot(true)) : (setV(Number(key) || 25), setHot(false))));
   const H = 0.1;
   const frac = (t: number) => {
     const p = v / 100;
@@ -21,10 +22,11 @@ export function VolatilityDiagram() {
   const at7 = frac(7);
   return (
     <Diagram
+      ns="vol"
       title="Volatilidad y hotspots: ¿cuánto crece el delta?"
       kicker="De la pizarra"
       label="Gráfica del tamaño del volumen delta frente al tiempo, según el porcentaje de bloques que cambia cada día y según si las escrituras se concentran en una zona caliente."
-      viewBox="0 0 560 200"
+      viewBox="0 0 560 210"
       controls={
         <>
           <Slider label="Bloques que cambian al día" value={v} min={1} max={90} onChange={setV} format={(n) => `${n} %`} />
@@ -84,6 +86,7 @@ const WRITES = [
 export function FsfreezeDiagram() {
   const [at, setAt] = React.useState(1);
   const [freeze, setFreeze] = React.useState(false);
+  useShow("fsfreeze", (key) => (key === "on" ? setFreeze(true) : (setFreeze(false), setAt(Number(key) || 2))));
   const seen = freeze ? 3 : at;
   const verdict = seen === 0 || seen === 3 ? "ok" : "bad";
   const why =
@@ -96,6 +99,7 @@ export function FsfreezeDiagram() {
           : "Las tres escrituras están dentro: el snapshot es consistente.";
   return (
     <Diagram
+      ns="fsfreeze"
       title="Snapshot de una MV encendida: fsfreeze"
       kicker="Consistencia"
       label="Tres escrituras para crear un fichero: bitmap, inodo y datos. Según en qué momento se tome el snapshot, el sistema de ficheros guardado queda consistente o no. Con fsfreeze siempre queda consistente."

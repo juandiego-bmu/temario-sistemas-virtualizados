@@ -709,37 +709,6 @@ body.iso {
   fill: color-mix(in oklab, var(--accent) 10%, var(--anatomy-face));
 }
 
-.tt-link {
-  fill: none;
-  stroke: var(--anatomy-mid);
-  stroke-width: 1.2;
-  stroke-dasharray: 3 3;
-}
-
-.tt-seg rect {
-  fill: var(--anatomy-mid);
-  transition: fill 0.3s;
-}
-
-.tt-seg[data-cost] rect {
-  fill: var(--accent);
-}
-
-.tt-seg[data-on] rect {
-  stroke: var(--anatomy-strong);
-  stroke-width: 1.5;
-  filter: drop-shadow(0 0 5px var(--accent));
-}
-
-.tt-t {
-  font: 9.5px var(--anatomy-mono);
-}
-
-.tt-via {
-  font: 700 9px var(--anatomy-mono);
-  fill: var(--accent) !important;
-}
-
 /* hybrid */
 .hy-dec {
   fill: color-mix(in oklab, var(--accent) 20%, var(--anatomy-card));
@@ -843,14 +812,6 @@ body.iso {
 .tf-split {
   stroke: var(--line);
   stroke-dasharray: 5 5;
-}
-
-.tf-edge {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2.2;
-  stroke-dasharray: 6 4;
-  animation: iso-flow 1.4s linear infinite;
 }
 
 .tf-node rect {
@@ -2035,5 +1996,450 @@ body.iso {
   }
   .hero-chips {
     margin-top: -32px;
+  }
+}
+
+/* ======================================================================
+   Term cards: recall mode and "ver en la figura"
+   ====================================================================== */
+.terms-wrap {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+}
+
+.terms-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font: 12px var(--anatomy-mono);
+}
+
+.cmp .terms-bar {
+  margin-bottom: -14px;
+}
+
+.terms-mode {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--anatomy-card);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-strong);
+  font: 600 12px var(--anatomy-mono);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.terms-mode:hover {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.terms-mode[aria-pressed="true"] {
+  background: color-mix(in oklab, var(--accent) 28%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.terms-count {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.terms-hint {
+  color: var(--anatomy-muted);
+}
+
+.terms-reset {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-text);
+  font: 11px var(--anatomy-mono);
+  cursor: pointer;
+}
+
+.term dd,
+.formula code,
+.formula-ex {
+  transition: filter 0.45s var(--anatomy-ease), opacity 0.45s;
+}
+
+.term[data-hidden],
+.formula[data-hidden] {
+  cursor: pointer;
+}
+
+.term[data-hidden] dd,
+.formula[data-hidden] code,
+.formula[data-hidden] .formula-ex {
+  filter: blur(7px);
+  opacity: 0.45;
+  user-select: none;
+}
+
+.term[data-hidden]:hover,
+.formula[data-hidden]:hover {
+  box-shadow: 0 0 0 1px var(--accent), -3px 0 0 0 var(--accent);
+}
+
+.term[data-hidden]:focus-visible,
+.formula[data-hidden]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.term-peek {
+  display: block;
+  margin-top: 8px;
+  font: 600 11px var(--anatomy-mono);
+  color: var(--accent);
+}
+
+.term-show {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.term-show button {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 14%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent);
+  color: var(--anatomy-strong);
+  font: 600 11.5px var(--font-sans), sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s var(--anatomy-ease);
+}
+
+.term-show button:hover {
+  background: color-mix(in oklab, var(--accent) 30%, var(--anatomy-card));
+  transform: translateX(2px);
+}
+
+.term-show button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* the figure a term card points at lights up for a moment */
+[data-flash] {
+  animation: asv-flash 1.5s var(--anatomy-ease);
+}
+
+@keyframes asv-flash {
+  30% {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 70%, transparent), 0 0 44px -6px var(--accent);
+  }
+}
+
+.pg-priv[data-flash],
+.pg-sens[data-flash] {
+  animation: asv-ellipse 1.5s var(--anatomy-ease);
+}
+
+@keyframes asv-ellipse {
+  30% {
+    stroke-width: 6px;
+  }
+}
+
+.iso-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+/* ======================================================================
+   Trap & emulate timeline
+   ====================================================================== */
+.tt-link {
+  fill: none;
+  stroke: var(--anatomy-mid);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+
+.tt-block {
+  fill: var(--anatomy-mid);
+  transition: fill 0.3s;
+}
+
+.tt-seg {
+  transition: opacity 0.3s;
+}
+
+.tt-seg[data-state="next"] {
+  opacity: 0.16;
+}
+
+.tt-seg[data-state="past"] .tt-block {
+  fill: color-mix(in oklab, var(--accent) 45%, var(--anatomy-mid));
+}
+
+.tt-seg[data-state="now"] .tt-block {
+  fill: var(--accent);
+  filter: drop-shadow(0 0 5px var(--accent));
+}
+
+.tt-pill rect {
+  fill: var(--anatomy-face);
+  stroke: var(--anatomy-mid);
+}
+
+.tt-pill text {
+  font: 700 9.5px var(--anatomy-mono);
+  fill: var(--anatomy-strong) !important;
+}
+
+.tt-seg[data-cost="trap"] .tt-pill rect {
+  fill: color-mix(in oklab, var(--anatomy-red) 30%, var(--anatomy-card));
+  stroke: var(--anatomy-red);
+}
+
+.tt-seg[data-cost="exit"] .tt-pill rect {
+  fill: color-mix(in oklab, var(--accent) 35%, var(--anatomy-card));
+  stroke: var(--accent);
+}
+
+.tt-sum {
+  margin: 0 0 8px;
+}
+
+.tt-list {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 24px;
+  font-size: 14px;
+}
+
+.tt-list li::marker {
+  color: var(--anatomy-muted);
+  font: 11px var(--anatomy-mono);
+}
+
+.tt-list button {
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--anatomy-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.tt-list button:hover {
+  color: var(--anatomy-strong);
+}
+
+.tt-list li[data-state="past"] button {
+  color: var(--anatomy-text);
+}
+
+.tt-list li[data-state="now"] button {
+  color: var(--anatomy-strong);
+  background: color-mix(in oklab, var(--accent) 16%, var(--anatomy-card));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.tt-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font: 700 10.5px var(--anatomy-mono);
+  color: var(--anatomy-strong);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.tt-list li[data-cost="trap"] .tt-tag {
+  color: var(--anatomy-red);
+  box-shadow: 0 0 0 1px var(--anatomy-red);
+}
+
+.tt-list li[data-cost="exit"] .tt-tag {
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* ======================================================================
+   Translation flow, three spaces, nested walk
+   ====================================================================== */
+.tf-edge {
+  fill: none;
+  stroke: var(--anatomy-lo);
+  stroke-width: 1.4;
+}
+
+.tf-e[data-on] .tf-edge {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-dasharray: 6 4;
+  animation: iso-flow 1.4s linear infinite;
+}
+
+.tf-head {
+  fill: var(--anatomy-lo);
+}
+
+.tf-head.on {
+  fill: var(--accent);
+}
+
+.tf-lbl {
+  font: 700 10px var(--anatomy-mono);
+  fill: var(--anatomy-muted) !important;
+}
+
+.tf-e[data-on] .tf-lbl {
+  fill: var(--accent) !important;
+}
+
+.ts-k {
+  font: 700 15px var(--font-display), sans-serif;
+  fill: var(--accent) !important;
+}
+
+.nw-v {
+  font-weight: 700;
+  fill: var(--anatomy-strong);
+}
+
+/* ======================================================================
+   Power simulator
+   ====================================================================== */
+.pw-sim {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+.pw-row {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pw-row:hover {
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+
+.pw-row[data-on] {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.pw-row th button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--anatomy-strong);
+  font: 600 14px var(--font-sans), sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pw-kind {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font: 10px var(--anatomy-mono);
+  color: var(--anatomy-red);
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+.pw-kind:empty {
+  display: none;
+}
+
+.pw-row[data-soft] .pw-kind {
+  color: var(--anatomy-green);
+}
+
+.pw-screen {
+  border-radius: 12px;
+  background: #050505;
+  box-shadow: 0 0 0 1px var(--line), inset 0 0 30px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.pw-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font: 11px var(--anatomy-mono);
+  color: #9a9a9a;
+  border-bottom: 1px solid #222;
+}
+
+.pw-led {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #333;
+  box-shadow: 0 0 0 1px #444;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.pw-led[data-on] {
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+}
+
+.pw-console {
+  height: 170px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: hidden;
+  font: 12px/1.6 var(--anatomy-mono);
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  transition: opacity 0.4s;
+}
+
+.pw-screen[data-off] .pw-console {
+  opacity: 0.35;
+}
+
+.pw-caret {
+  animation: badge-dot 1s steps(1) infinite;
+}
+
+/* ======================================================================
+   Comparison tables: cover the cells
+   ====================================================================== */
+.cmp-table td[data-hidden] {
+  cursor: pointer;
+}
+
+.cmp-cover {
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--accent) 16%, var(--anatomy-face)) 0 8px, var(--anatomy-face) 8px 16px);
+  color: var(--accent);
+  font: 700 15px var(--anatomy-mono);
+  cursor: pointer;
+}
+
+.cmp-cover:hover {
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+@media (max-width: 760px) {
+  .pw-sim {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

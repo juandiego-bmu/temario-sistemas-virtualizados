@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as k from "../iso/iso-kit";
 import { Dots, FaceText, Line, Solid, Wire } from "../iso/react/draw";
-import { Slider } from "../diagrams/kit";
+import { Slider, useShow } from "../diagrams/kit";
 import { Bench, Choice, Figure, fit } from "./common";
 
 const BASE_MB = 303;
@@ -29,6 +29,11 @@ export function ClonesFigure() {
   const [linked, setLinked] = React.useState(true);
   const [touched, setTouched] = React.useState(false);
   const [boot, setBoot] = React.useState(false);
+  useShow("clones", (key) => {
+    setLinked(key !== "full");
+    setTouched(key === "touch");
+    setBoot(key === "boot");
+  });
   const space = linked ? BASE_MB + n * LINK_MB : BASE_MB * (n + 1);
   const spots = SPOTS.slice(0, n);
   let say = `${n} clones · disco usado ${space >= 1000 ? `${(space / 1000).toFixed(2)} GB` : `${space.toFixed(1)} MB`}`;
@@ -36,6 +41,7 @@ export function ClonesFigure() {
   else if (boot && linked) say = `Arrancan ${n} clones: todos leen los mismos bloques de la plantilla (aciertos de caché)`;
   return (
     <Figure
+      ns="clones"
       fig="Fig 4"
       title="Full clones vs linked clones"
       hint="Crea clones de la plantilla"

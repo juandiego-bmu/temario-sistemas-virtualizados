@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Choice } from "../figs/common";
-import { Diagram } from "./kit";
+import { Diagram, useShow } from "./kit";
 
 type NetMode = "bridged" | "nat" | "host";
 type Test = "out" | "in" | "vmvm" | "host";
@@ -28,10 +28,10 @@ const IPS: Record<NetMode, [string, string]> = {
 
 // Packet paths in screen space for each test (the router node only exists in NAT mode).
 const PATHS: Record<Test, string> = {
-  out: "M420 70 L330 100 L250 100 L170 100 L80 70",
-  in: "M80 160 L170 100 L250 100 L330 100 L420 70",
-  vmvm: "M420 70 L330 100 L420 160",
-  host: "M250 175 L250 130 L330 100 L420 70",
+  out: "M398 70 L330 100 L250 100 L172 100 L128 68",
+  in: "M122 160 L172 100 L250 100 L330 100 L398 70",
+  vmvm: "M398 70 L330 100 L398 160",
+  host: "M250 158 L250 130 L330 100 L398 70",
 };
 
 /** The three hosted LAN modes, tested with four connections. */
@@ -39,6 +39,9 @@ export function HostedNetModes() {
   const [mode, setMode] = React.useState<NetMode>("nat");
   const [test, setTest] = React.useState<Test>("in");
   const [run, setRun] = React.useState(0);
+  useShow("net", (key) => {
+    if (key === "bridged" || key === "nat" || key === "host") (setMode(key), setTest(key === "host" ? "vmvm" : "in"), setRun((r) => r + 1));
+  });
   const ok = OK[mode][test];
   const why: Record<NetMode, Record<Test, string>> = {
     bridged: {
@@ -62,6 +65,7 @@ export function HostedNetModes() {
   };
   return (
     <Diagram
+      ns="net"
       title="Bridged, NAT y host-only"
       kicker="LANs virtuales en hosted"
       label="Un host con su NIC real conectada a la LAN e Internet, una LAN virtual con dos máquinas virtuales, y cuatro pruebas de conexión que funcionan o no según el modo."
@@ -169,14 +173,16 @@ const FLOWS: { id: Flow; text: string; note: string }[] = [
 /** The slides' server: vSwitches, port groups with 802.1q tags and trunk uplinks. */
 export function VlanDiagram() {
   const [f, setF] = React.useState<Flow>("g2");
+  useShow("vlan", (key) => FLOWS.some((x) => x.id === key) && setF(key as Flow));
   const flow = FLOWS.find((x) => x.id === f)!;
   const on = (id: Flow | Flow[]) => ((Array.isArray(id) ? id : [id]).includes(f) ? "" : undefined);
   return (
     <Diagram
+      ns="vlan"
       title="vSwitches, VLANs 802.1q y trunks"
       kicker="LANs virtuales en native"
       label="Servidor físico con cinco máquinas virtuales, grupos de puertos con VLAN 101 a 105, tres switches virtuales, dos NICs reales en modo trunk y un switch externo."
-      viewBox="0 0 560 300"
+      viewBox="0 0 560 316"
       wide
       controls={
         <div className="choice" role="group" aria-label="Tráfico">
@@ -190,7 +196,7 @@ export function VlanDiagram() {
       }
       note={flow.note}
     >
-      <rect className="nm-host" x={8} y={8} width={544} height={210} rx={14} />
+      <rect className="nm-host" x={8} y={8} width={544} height={236} rx={14} />
       <text className="dg-kick" x={20} y={26}>
         Servidor físico
       </text>
@@ -249,46 +255,46 @@ export function VlanDiagram() {
       <path className="vl-link" data-on={on("g2")} d="M239 118 L210 140" />
       <path className="vl-link" data-on={on("iso")} d="M339 118 L340 140" />
       <path className="vl-link" data-on={on("nat")} d="M489 118 L490 140" />
-      <circle className="dg-node" data-on={on("nat")} cx={430} cy={196} r={14} />
-      <text className="dg-s" x={430} y={200} textAnchor="middle">
+      <circle className="dg-node" data-on={on("nat")} cx={430} cy={190} r={14} />
+      <text className="dg-s" x={430} y={194} textAnchor="middle">
         NAT
       </text>
-      <path className="vl-link" data-on={on("nat")} d="M490 164 L440 186" />
+      <path className="vl-link" data-on={on("nat")} d="M490 164 L441 181" />
       {[
         ["NIC1", 40, "g1"],
         ["NIC2", 170, "g2"],
       ].map(([t, x, id]) => (
         <g key={t as string} className="vl-sw" data-on={on(id as Flow)}>
-          <rect x={x as number} y={204} width={60} height={26} rx={4} />
-          <text className="dg-s" x={(x as number) + 30} y={221} textAnchor="middle">
+          <rect x={x as number} y={200} width={60} height={24} rx={4} />
+          <text className="dg-s" x={(x as number) + 30} y={216} textAnchor="middle">
             {t}
           </text>
         </g>
       ))}
-      <path className="vl-link" data-on={on("g1")} d="M70 164 L70 204" />
-      <path className="vl-link" data-on={on("g2")} d="M190 164 L200 204" />
-      <path className="vl-link" data-on={on("nat")} d="M416 200 L230 214" />
-      <text className="dg-s" x={18} y={250}>
+      <path className="vl-link" data-on={on("g1")} d="M70 164 L70 200" />
+      <path className="vl-link" data-on={on("g2")} d="M190 164 L200 200" />
+      <path className="vl-link" data-on={on("nat")} d="M416 193 L230 210" />
+      <path className="vl-link trunk" data-on={on("g1")} d="M70 224 L240 284" />
+      <path className="vl-link trunk" data-on={on(["g2", "nat"])} d="M200 224 L262 284" />
+      <text className="dg-s" x={22} y={272}>
         trunk {"{101}"}
       </text>
-      <text className="dg-s" x={262} y={244}>
+      <text className="dg-s" x={300} y={266}>
         trunk {"{102, 103}"}
       </text>
-      <path className="vl-link trunk" data-on={on("g1")} d="M70 230 L230 280" />
-      <path className="vl-link trunk" data-on={on(["g2", "nat"])} d="M200 230 L250 280" />
-      <rect className="dg-node" x={220} y={276} width={110} height={22} rx={4} />
-      <text className="dg-s" x={275} y={291} textAnchor="middle">
+      <rect className="dg-node" x={214} y={284} width={110} height={22} rx={4} />
+      <text className="dg-s" x={269} y={299} textAnchor="middle">
         switch externo
       </text>
       {f !== "iso" ? (
         <g className="vl-tag">
-          <rect x={f === "g1" ? 112 : 186} y={248} width={80} height={20} rx={10} />
-          <text x={f === "g1" ? 152 : 226} y={262} textAnchor="middle">
+          <rect x={f === "g1" ? 132 : 197} y={250} width={80} height={20} rx={10} />
+          <text x={f === "g1" ? 172 : 237} y={264} textAnchor="middle">
             {f === "g1" ? "tag 101" : f === "g2" ? "tag 103" : "IP del NAT"}
           </text>
         </g>
       ) : (
-        <text className="dg-s accent-text" x={340} y={190} textAnchor="middle">
+        <text className="dg-s accent-text" x={340} y={184} textAnchor="middle">
           no sale del servidor
         </text>
       )}

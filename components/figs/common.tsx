@@ -89,11 +89,13 @@ export function Figure({
   label,
   mode,
   controls,
+  ns,
   onPointerMove,
   onPointerLeave,
   children,
 }: {
   boxRef?: React.Ref<HTMLDivElement>;
+  ns?: string;
   fig: string;
   title: string;
   hint?: string;
@@ -123,7 +125,7 @@ export function Figure({
     onPointerLeave?.();
   };
   return (
-    <div className="fig" ref={boxRef}>
+    <div className="fig" ref={boxRef} data-ns={ns}>
       <div className="tilt" ref={tilt} onPointerMove={move} onPointerLeave={leave}>
         {mode ? (
           <div className="mode-badge" key={mode} role="status">

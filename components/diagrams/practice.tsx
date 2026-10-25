@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Cmd } from "../code";
 import { Choice } from "../figs/common";
-import { Diagram, Steps, useSteps } from "./kit";
+import { Diagram, Steps, useShow, useSteps } from "./kit";
 
 /* ------------------------------------------------------------------ */
 /* Where am I? The prompt tells you, and poweroff means very different things */
@@ -24,9 +24,11 @@ const PROMPTS = [
 
 export function WhereAmI() {
   const [i, setI] = React.useState(1);
+  useShow("where", (key) => setI(Math.max(0, Math.min(PROMPTS.length - 1, Number(key) || 0))));
   const pr = PROMPTS[i];
   return (
     <Diagram
+      ns="where"
       title="¿Dónde estoy? Mira el prompt"
       kicker="Antes de teclear poweroff"
       label="Camino de la conexión: PC del laboratorio, VPN, servidor KVM y máquina virtual. Según el prompt se ilumina dónde estás."
@@ -164,7 +166,7 @@ export function QemuImgLab() {
   const [last, setLast] = React.useState("");
   const baseOk = !!base(files);
   return (
-    <figure className="dg dg-wide qil reveal">
+    <figure className="dg dg-wide qil reveal" data-ns="qil">
       <figcaption className="dg-head">
         <span className="dg-kicker">Simulador</span>
         <strong>Laboratorio de qemu-img (Práctica 1)</strong>
@@ -268,10 +270,11 @@ export function CommandAnatomy() {
   const [preset, setPreset] = React.useState<keyof typeof PRESETS>("qmp");
   const tokens = PRESETS[preset].split(" ");
   const [sel, setSel] = React.useState(0);
+  useShow("anat", (key) => key in PRESETS && setPreset(key as keyof typeof PRESETS));
   const help = (t: string) => FLAG_HELP.find(([re]) => re.test(t.replace(/^`|`$/g, "")))?.[1] ?? "Valor del parámetro anterior.";
   React.useEffect(() => setSel(0), [preset]);
   return (
-    <figure className="dg dg-wide ca reveal">
+    <figure className="dg dg-wide ca reveal" data-ns="anat">
       <figcaption className="dg-head">
         <span className="dg-kicker">Pasa el ratón o pulsa</span>
         <strong>Anatomía de un comando qemu-system</strong>
@@ -311,8 +314,10 @@ export function CommandAnatomy() {
 
 export function NetdevPairing() {
   const [bad, setBad] = React.useState(false);
+  useShow("pair", (key) => setBad(key === "bad"));
   return (
     <Diagram
+      ns="pair"
       title="-netdev + -device: el mismo id"
       kicker="Frontend y backend"
       label="Dos fragmentos del comando: el backend -netdev con id net0 y el frontend -device con netdev=net0, unidos por una línea. Con un id distinto la unión se rompe."
@@ -366,6 +371,10 @@ export function SlirpDiagram() {
   const [fwd, setFwd] = React.useState(true);
   const [fw, setFw] = React.useState(false);
   const [t, setT] = React.useState<SlTest>("ext");
+  useShow("slirp", (key) => {
+    if (key === "fwd") (setFwd(true), setFw(true), setT("ext"));
+    else if (["ext", "loc", "vmhost", "ping", "direct"].includes(key)) setT(key as SlTest);
+  });
   const res: Record<SlTest, [boolean, string]> = {
     ext: [fwd && fw, !fwd ? "Sin hostfwd nadie puede entrar en la MV desde fuera." : !fw ? "La regla hostfwd existe, pero el firewall del servidor bloquea el puerto 2222: firewall-cmd --add-port=2222/tcp." : "PC → KVM1:2222 → la redirección lo manda al puerto 22 de la MV."],
     loc: [fwd, fwd ? "Desde el propio servidor no hace falta abrir el firewall: ssh -p 2222 root@localhost." : "Sin hostfwd la MV no es accesible ni desde el propio host."],
@@ -376,6 +385,7 @@ export function SlirpDiagram() {
   const [ok, why] = res[t];
   return (
     <Diagram
+      ns="slirp"
       title="Red user (SLiRP): NAT dentro de QEMU"
       kicker="Backend por defecto"
       label="Un servidor KVM con su firewall y dentro el proceso QEMU con la red SLiRP: la MV 10.0.2.15, la puerta de enlace 10.0.2.2 y el DNS 10.0.2.3. Una regla hostfwd conecta el puerto 2222 del host con el 22 de la MV."
@@ -417,7 +427,7 @@ export function SlirpDiagram() {
         Servidor KVM1
       </text>
       <rect className={fw ? "sl-fw open" : "sl-fw"} x={120} y={60} width={14} height={64} rx={3} />
-      <text className="dg-s" x={127} y={140} textAnchor="middle">
+      <text className="dg-s" x={142} y={136}>
         firewall
       </text>
       <rect className="nm-slirp" x={250} y={46} width={286} height={140} rx={12} />
@@ -474,6 +484,7 @@ const BR_STEPS = [
 
 export function BridgeLab() {
   const { step, playing, play, go } = useSteps(BR_STEPS.length, 2600);
+  useShow("bridge", () => (go(0), play()));
   const s = BR_STEPS[step];
   const vms = [
     { name: "DHCP", ip: "10.0.0.253", mac: "…:E3:19", from: 2 },
@@ -481,7 +492,7 @@ export function BridgeLab() {
     { name: "ssh2", ip: step >= 4 ? "10.0.0.y (DHCP)" : "sin IP", mac: "…:E3:1B", from: 3 },
   ];
   return (
-    <figure className="dg dg-wide reveal">
+    <figure className="dg dg-wide reveal" data-ns="bridge">
       <figcaption className="dg-head">
         <span className="dg-kicker">Práctica 2 paso a paso</span>
         <strong>Bridge privado br1 con servidor DHCP</strong>
@@ -507,13 +518,16 @@ export function BridgeLab() {
         {vms.map((v, i) =>
           step >= v.from ? (
             <g key={v.name} className="br-vm">
-              <path className="dg-wire" data-flow={step === 4 && i > 0 ? "" : undefined} d={`M${190 + i * 130} 96 L${190 + i * 130} 126`} />
-              <rect className={i === 0 ? "dg-node accent" : "dg-node out"} x={130 + i * 130} y={44} width={120} height={52} rx={8} />
-              <text className={i === 0 ? "dg-t wa-on" : "dg-t"} x={190 + i * 130} y={64} textAnchor="middle">
+              <path className="dg-wire" data-flow={step === 4 && i > 0 ? "" : undefined} d={`M${190 + i * 130} 104 L${190 + i * 130} 126`} />
+              <rect className={i === 0 ? "dg-node accent" : "dg-node out"} x={128 + i * 130} y={40} width={124} height={64} rx={8} />
+              <text className={i === 0 ? "dg-t wa-on" : "dg-t"} x={190 + i * 130} y={60} textAnchor="middle">
                 {v.name}
               </text>
-              <text className={i === 0 ? "dg-s wa-on" : "dg-s"} x={190 + i * 130} y={80} textAnchor="middle">
-                {v.ip} · {v.mac}
+              <text className={i === 0 ? "dg-s wa-on" : "dg-s"} x={190 + i * 130} y={77} textAnchor="middle">
+                {v.ip}
+              </text>
+              <text className={i === 0 ? "dg-s wa-on" : "dg-s"} x={190 + i * 130} y={93} textAnchor="middle">
+                MAC {v.mac}
               </text>
             </g>
           ) : null,
@@ -521,6 +535,129 @@ export function BridgeLab() {
       </svg>
       <Steps step={step} total={BR_STEPS.length} playing={playing} onPlay={play} onStep={go} labels={BR_STEPS.map((x, i) => `${i + 1}/${BR_STEPS.length} · ${x.t}`)} />
       <Cmd>{s.cmd}</Cmd>
+    </figure>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Power actions: hard ones cut the guest off, soft ones let it shut itself down */
+
+const BOOT: [number, string][] = [
+  [0, "SeaBIOS (version 1.16)"],
+  [350, "Booting from Hard Disk..."],
+  [750, "OpenRC is starting up Linux (x86_64)"],
+  [1100, " * Starting sshd ...                  [ ok ]"],
+  [1450, ""],
+  [1500, "alpine-base login:"],
+];
+
+const POWER = [
+  { id: "on", name: "Power on", soft: false, hv: "Sí", agent: "—", guest: "—", lines: BOOT, end: true, why: "Encender: arranca la BIOS virtual y después el SO guest." },
+  { id: "off", name: "Power off", soft: false, hv: "Sí", agent: "Sí", guest: "poweroff -f -n -d0", lines: [[0, "▮ corte inmediato: el guest no se entera"]] as [number, string][], end: false, why: "Duro: como tirar del cable. Lo que no se había escrito a disco se pierde y el sistema de ficheros puede quedar inconsistente. En la consola de QEMU: Ctrl+A x." },
+  { id: "reset", name: "Reset", soft: false, hv: "Sí", agent: "Sí", guest: "reboot -f -n -d0", lines: [[0, "▮ reinicio inmediato, sin apagado ordenado"] as [number, string], ...BOOT.map(([t, l]) => [t + 500, l] as [number, string])], end: true, why: "Duro: igual de brusco que power off, pero vuelve a arrancar." },
+  {
+    id: "shutdown",
+    name: "Shutdown",
+    soft: true,
+    hv: "Evento ACPI",
+    agent: "Sí",
+    guest: "poweroff",
+    lines: [
+      [0, "(ACPI) power button pressed"],
+      [400, "The system is going down NOW!"],
+      [800, " * Stopping sshd ...                  [ ok ]"],
+      [1200, "Sent SIGTERM to all processes"],
+      [1600, " * Unmounting filesystems ...         [ ok ]"],
+      [2000, "reboot: Power down"],
+    ] as [number, string][],
+    end: false,
+    why: "Suave: el guest ejecuta su secuencia de apagado (para servicios, vacía cachés, desmonta discos) y se apaga él solo. Desde el hipervisor se pide con un evento ACPI (system_powerdown en el monitor).",
+  },
+  {
+    id: "reboot",
+    name: "Reboot",
+    soft: true,
+    hv: "—",
+    agent: "Sí",
+    guest: "reboot",
+    lines: [
+      [0, "The system is going down NOW!"],
+      [400, " * Stopping sshd ...                  [ ok ]"],
+      [800, " * Unmounting filesystems ...         [ ok ]"],
+      [1200, "reboot: Restarting system"],
+      ...BOOT.map(([t, l]) => [t + 1600, l] as [number, string]),
+    ] as [number, string][],
+    end: true,
+    why: "Suave: apagado ordenado desde dentro y nuevo arranque.",
+  },
+];
+
+export function PowerSim() {
+  const [run, setRun] = React.useState<{ id: string; n: number } | null>(null);
+  const [lines, setLines] = React.useState<string[]>(["alpine-base login:"]);
+  const [on, setOn] = React.useState(true);
+  const timers = React.useRef<number[]>([]);
+  React.useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
+  const act = (id: string) => {
+    const a = POWER.find((x) => x.id === id)!;
+    timers.current.forEach(window.clearTimeout);
+    timers.current = [];
+    setRun({ id, n: (run?.n ?? 0) + 1 });
+    setLines([]);
+    if (!a.soft && a.id !== "on") setOn(false);
+    a.lines.forEach(([t, l], i) =>
+      timers.current.push(
+        window.setTimeout(() => {
+          setLines((ls) => [...ls.slice(-6), l]);
+          if (i === a.lines.length - 1) setOn(a.end);
+          else if (a.end && t >= (a.id === "on" ? 0 : 500)) setOn(true);
+        }, t),
+      ),
+    );
+  };
+  const cur = POWER.find((x) => x.id === run?.id);
+  return (
+    <figure className="dg dg-wide reveal" data-ns="power">
+      <figcaption className="dg-head">
+        <span className="dg-kicker">Acciones de energía · pulsa una fila</span>
+        <strong>Duro vs suave</strong>
+      </figcaption>
+      <div className="pw-sim">
+        <table className="pw-table">
+          <thead>
+            <tr>
+              <th>Acción</th>
+              <th>Hipervisor</th>
+              <th>Agente</th>
+              <th>Dentro del guest</th>
+            </tr>
+          </thead>
+          <tbody>
+            {POWER.map((a) => (
+              <tr key={a.id} className="pw-row" data-on={run?.id === a.id ? "" : undefined} data-soft={a.soft ? "" : undefined} onClick={() => act(a.id)}>
+                <th>
+                  <button type="button" onClick={(e) => (e.stopPropagation(), act(a.id))}>
+                    ▶ {a.name} <span className="pw-kind">{a.id === "on" ? "" : a.soft ? "suave" : "duro"}</span>
+                  </button>
+                </th>
+                <td>{a.hv}</td>
+                <td>{a.agent}</td>
+                <td>{a.guest === "—" ? "—" : <code>{a.guest}</code>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="pw-screen" data-off={on ? undefined : ""}>
+          <div className="pw-bar">
+            <span className="pw-led" data-on={on ? "" : undefined} /> consola de la MV
+          </div>
+          <pre className="pw-console" aria-live="polite">
+            {lines.join("\n")}
+            {on ? <span className="pw-caret">▌</span> : null}
+          </pre>
+        </div>
+      </div>
+      <p className="dg-note">{cur ? <><b>{cur.name}:</b> {cur.why}</> : "Pulsa una acción y mira qué le da tiempo a hacer al guest."}</p>
     </figure>
   );
 }

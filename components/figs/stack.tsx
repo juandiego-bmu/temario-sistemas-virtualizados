@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as k from "../iso/iso-kit";
 import { Dots, FaceText, Line, Solid } from "../iso/react/draw";
+import { useShow } from "../diagrams/kit";
 import { Bench, Choice, Figure, fit, useTicker } from "./common";
 
 type Mode = "t2" | "t1" | "dom0";
@@ -102,6 +103,9 @@ function Hardware({ lit }: { lit: boolean }) {
 export function StackFigure() {
   const [mode, setMode] = React.useState<Mode>("t2");
   const { ref, step, setStep } = useTicker(1500);
+  useShow("stack", (key) => {
+    if (key === "t1" || key === "t2" || key === "dom0") (setMode(key), setStep(0));
+  });
   const steps = STEPS[mode];
   const s = steps[step % steps.length];
   const on = (part: Part) => s.part === part;
@@ -167,6 +171,7 @@ export function StackFigure() {
   return (
     <Figure
       boxRef={ref}
+      ns="stack"
       fig="Fig 1"
       title="Tipos de hipervisor"
       hint="Una escritura en disco baja por las capas"

@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as k from "../iso/iso-kit";
 import { Dots, FaceText, Line, Solid, Wire } from "../iso/react/draw";
-import { Slider } from "../diagrams/kit";
+import { Slider, useShow } from "../diagrams/kit";
 import { Bench, Choice, Figure, fit } from "./common";
 
 const GB = 0.62; // world units per GB of height
@@ -24,6 +24,10 @@ export function DatastoreFigure() {
   const [policy, setPolicy] = React.useState<Policy>("mix");
   const [w2, setW2] = React.useState(15);
   const [w3, setW3] = React.useState(30);
+  useShow("ds", (key) => {
+    if (key === "thick" || key === "thin" || key === "mix") setPolicy(key);
+    if (key === "full") (setPolicy("mix"), setW2(40), setW3(70));
+  });
   const thin = (i: number) => (policy === "thin" ? true : policy === "thick" ? false : i > 0);
   const written = [12, w2, w3];
   // Thick disks reserve their full size at creation; under all-thick, MV3 no longer fits.
@@ -53,6 +57,7 @@ export function DatastoreFigure() {
 
   return (
     <Figure
+      ns="ds"
       fig="Fig 2"
       title="Datastore: thin vs thick"
       hint="Las MVs escriben datos"

@@ -130,7 +130,11 @@ const TABLES: Table[] = [
 export function CompareTables() {
   const [tab, setTab] = React.useState(TABLES[0].id);
   const [col, setCol] = React.useState<number | null>(null);
+  const [quiz, setQuiz] = React.useState(false);
+  const [seen, setSeen] = React.useState<Set<string>>(new Set());
   const t = TABLES.find((x) => x.id === tab)!;
+  const cells = t.rows.length * t.cols.length;
+  const opened = [...seen].filter((id) => id.startsWith(`${tab}:`)).length;
   return (
     <div className="cmp">
       <div className="choice cmp-tabs" role="tablist" aria-label="Comparativa">
@@ -139,6 +143,23 @@ export function CompareTables() {
             {x.title}
           </button>
         ))}
+      </div>
+      <div className="terms-bar">
+        <button type="button" className="terms-mode" aria-pressed={quiz} onClick={() => (setQuiz((q) => !q), setSeen(new Set()))}>
+          🧠 {quiz ? "Salir del modo repaso" : "Modo repaso: tapar las celdas"}
+        </button>
+        {quiz ? (
+          <>
+            <span className="terms-count" aria-live="polite">
+              {opened} / {cells} destapadas
+            </span>
+            <button type="button" className="terms-reset" onClick={() => setSeen(new Set())}>
+              Tapar otra vez
+            </button>
+          </>
+        ) : (
+          <span className="terms-hint">piensa la respuesta de cada celda antes de destaparla</span>
+        )}
       </div>
       <div className="cmp-scroll" tabIndex={0} role="region" aria-label={`Tabla: ${t.title}`}>
         <table className="cmp-table" style={{ minWidth: Math.max(560, 150 + t.cols.length * 170) }}>
@@ -158,11 +179,30 @@ export function CompareTables() {
             {t.rows.map((r) => (
               <tr key={r.k}>
                 <th scope="row">{r.k}</th>
-                {r.v.map((v, i) => (
-                  <td key={i} style={{ "--h": t.cols[i].hue } as React.CSSProperties} data-on={col === i ? "" : undefined} data-dim={col !== null && col !== i ? "" : undefined} onMouseEnter={() => setCol(i)} onMouseLeave={() => setCol(null)}>
-                    {v}
-                  </td>
-                ))}
+                {r.v.map((v, i) => {
+                  const id = `${tab}:${r.k}:${i}`;
+                  const hidden = quiz && !seen.has(id);
+                  return (
+                    <td
+                      key={i}
+                      style={{ "--h": t.cols[i].hue } as React.CSSProperties}
+                      data-on={col === i ? "" : undefined}
+                      data-dim={col !== null && col !== i ? "" : undefined}
+                      data-hidden={hidden ? "" : undefined}
+                      onMouseEnter={() => setCol(i)}
+                      onMouseLeave={() => setCol(null)}
+                      onClick={hidden ? () => setSeen((s) => new Set(s).add(id)) : undefined}
+                    >
+                      {hidden ? (
+                        <button type="button" className="cmp-cover" aria-label={`${r.k} de ${t.cols[i].short}: destapar`}>
+                          ?
+                        </button>
+                      ) : (
+                        v
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

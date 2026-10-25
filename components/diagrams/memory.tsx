@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Choice } from "../figs/common";
-import { Diagram, Slider, Steps, useSteps } from "./kit";
+import { Diagram, Slider, Steps, useShow, useSteps } from "./kit";
 
 const UNITS = ["B", "KB", "MB", "GB", "TB", "PB", "EB"];
 // 2^bits bytes in human form: 22 → "4 MB".
@@ -22,6 +22,7 @@ export function PagingCalculator() {
   const [la, setLa] = React.useState(32);
   const [phys, setPhys] = React.useState(30); // log2 bytes: 30 = 1 GB
   const [page, setPage] = React.useState(12); // log2 bytes: 12 = 4 KB
+  useShow("calc", () => (setLa(32), setPhys(30), setPage(12)));
   const off = page;
   const pageBits = la - off;
   const frameBits = phys - page;
@@ -36,6 +37,7 @@ export function PagingCalculator() {
   const scale = 540 / la;
   return (
     <Diagram
+      ns="calc"
       title="Calculadora de tablas de páginas"
       kicker="Ejercicio tipo"
       label="Calculadora: a partir del ancho de la dirección lógica, la memoria física y el tamaño de página calcula páginas, marcos, bits, tamaño de entrada, tamaño de la tabla y niveles."
@@ -108,39 +110,59 @@ const CASES: { id: Case; text: string; path: string[]; note: string }[] = [
   { id: "hit", text: "Acierto de TLB", path: ["la", "tlb", "pa"], note: "La TLB tiene el par (página, marco): un solo acceso a memoria, el del dato." },
   { id: "walk", text: "Fallo de TLB", path: ["la", "tlb", "walk", "v", "p", "pa"], note: "La MMU recorre la tabla (page walk): con N niveles, N accesos más el del dato. Todo en hardware." },
   { id: "free", text: "Fallo de página, hay marco libre", path: ["la", "tlb", "walk", "v", "p", "pf", "free", "swapin", "upd", "retry"], note: "P = 0: la RTI del SO trae la página del swap (swap-in), actualiza la tabla y reintenta la instrucción." },
-  { id: "evict", text: "Fallo de página, sin marco libre", path: ["la", "tlb", "walk", "v", "p", "pf", "free", "evict", "inval", "swapin", "upd", "retry"], note: "No hay marcos libres: primero se expulsa una víctima (swap-out), se invalida su entrada de TLB y se actualiza la tabla." },
+  { id: "evict", text: "Fallo de página, sin marco libre", path: ["la", "tlb", "walk", "v", "p", "pf", "free", "evict", "inval", "swapin", "upd", "retry"], note: "No hay marcos libres: primero se expulsa una víctima (swap-out), se invalida su entrada de TLB y se actualiza la tabla; después, swap-in." },
   { id: "segv", text: "Página no válida", path: ["la", "tlb", "walk", "v", "segv"], note: "V = 0: la página no es del proceso → fallo de segmentación." },
 ];
 
 const NODES: Record<string, { x: number; y: number; w: number; t: string; kind?: "dec" | "end" | "bad" }> = {
-  la: { x: 10, y: 20, w: 92, t: "Dir. lógica" },
-  tlb: { x: 120, y: 20, w: 70, t: "¿TLB hit?", kind: "dec" },
-  walk: { x: 210, y: 20, w: 92, t: "Page walk" },
-  v: { x: 210, y: 70, w: 70, t: "¿V?", kind: "dec" },
-  p: { x: 210, y: 120, w: 70, t: "¿P?", kind: "dec" },
-  pa: { x: 100, y: 170, w: 110, t: "Dir. física", kind: "end" },
-  segv: { x: 318, y: 70, w: 110, t: "Segmentation fault", kind: "bad" },
-  pf: { x: 318, y: 120, w: 110, t: "Page fault (RTI)" },
-  free: { x: 448, y: 120, w: 100, t: "¿Marco libre?", kind: "dec" },
-  evict: { x: 448, y: 20, w: 100, t: "Swap-out víctima" },
-  inval: { x: 448, y: 70, w: 100, t: "Invalidar TLB" },
-  swapin: { x: 448, y: 170, w: 100, t: "Swap-in" },
-  upd: { x: 318, y: 170, w: 110, t: "Actualizar TP" },
-  retry: { x: 318, y: 220, w: 140, t: "Reintentar instrucción", kind: "end" },
+  la: { x: 10, y: 30, w: 92, t: "Dir. lógica" },
+  tlb: { x: 120, y: 30, w: 100, t: "¿TLB hit?", kind: "dec" },
+  walk: { x: 238, y: 30, w: 92, t: "Page walk" },
+  v: { x: 254, y: 92, w: 60, t: "¿V?", kind: "dec" },
+  p: { x: 254, y: 152, w: 60, t: "¿P?", kind: "dec" },
+  pa: { x: 110, y: 228, w: 214, t: "Dir. física", kind: "end" },
+  segv: { x: 352, y: 92, w: 140, t: "Segmentation fault", kind: "bad" },
+  pf: { x: 352, y: 152, w: 140, t: "Page fault (RTI)" },
+  free: { x: 512, y: 152, w: 116, t: "¿Marco libre?", kind: "dec" },
+  evict: { x: 512, y: 92, w: 116, t: "Swap-out víctima" },
+  inval: { x: 512, y: 30, w: 116, t: "Invalidar TLB" },
+  swapin: { x: 512, y: 228, w: 116, t: "Swap-in" },
+  upd: { x: 352, y: 228, w: 140, t: "Actualizar TP" },
+  retry: { x: 342, y: 278, w: 160, t: "Reintentar instrucción", kind: "end" },
 };
+
+// Every edge is drawn on its own route, so no line runs behind another box.
+const EDGES: { a: string; b: string; d: string; label?: string; lx?: number; ly?: number; anchor?: "start" | "middle" }[] = [
+  { a: "la", b: "tlb", d: "M102 45 H120" },
+  { a: "tlb", b: "walk", d: "M220 45 H238", label: "no", lx: 229, ly: 38, anchor: "middle" },
+  { a: "tlb", b: "pa", d: "M170 60 V228", label: "sí", lx: 176, ly: 148 },
+  { a: "walk", b: "v", d: "M284 60 V92" },
+  { a: "v", b: "segv", d: "M314 107 H352", label: "0", lx: 333, ly: 101, anchor: "middle" },
+  { a: "v", b: "p", d: "M284 122 V152", label: "1", lx: 290, ly: 141 },
+  { a: "p", b: "pa", d: "M284 182 V228", label: "1", lx: 290, ly: 209 },
+  { a: "p", b: "pf", d: "M314 167 H352", label: "0", lx: 333, ly: 161, anchor: "middle" },
+  { a: "pf", b: "free", d: "M492 167 H512" },
+  { a: "free", b: "swapin", d: "M570 182 V228", label: "sí", lx: 576, ly: 209 },
+  { a: "free", b: "evict", d: "M570 152 V122", label: "no", lx: 576, ly: 141 },
+  { a: "evict", b: "inval", d: "M570 92 V60" },
+  { a: "inval", b: "swapin", d: "M628 45 H636 V243 H628" },
+  { a: "swapin", b: "upd", d: "M512 243 H492" },
+  { a: "upd", b: "retry", d: "M422 258 V278" },
+];
 
 export function TranslationFlow() {
   const [c, setC] = React.useState<Case>("free");
+  useShow("flow", (key) => CASES.some((x) => x.id === key) && setC(key as Case));
   const cs = CASES.find((x) => x.id === c)!;
   const on = new Set(cs.path);
-  const mid = (id: string) => [NODES[id].x + NODES[id].w / 2, NODES[id].y + 15] as const;
-  const edges = cs.path.slice(1).map((id, i) => [cs.path[i], id]);
+  const live = (a: string, b: string) => cs.path.some((id, i) => id === a && cs.path[i + 1] === b);
   return (
     <Diagram
+      ns="flow"
       title="De dirección lógica a física"
       kicker="Memoria virtual paginada"
       label="Diagrama de flujo de la traducción: TLB, recorrido de la tabla, bit de validez, bit de presencia, fallo de página, reemplazo y reintento."
-      viewBox="0 0 560 256"
+      viewBox="0 0 640 312"
       wide
       controls={
         <div className="choice" role="group" aria-label="Caso">
@@ -154,17 +176,33 @@ export function TranslationFlow() {
       }
       note={cs.note}
     >
-      <line className="tf-split" x1={308} y1={14} x2={308} y2={250} />
-      <text className="dg-kick" x={300} y={10} textAnchor="end">
+      <defs>
+        <marker id="tf-on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path className="tf-head on" d="M0 0 L10 5 L0 10 z" />
+        </marker>
+        <marker id="tf-off" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path className="tf-head" d="M0 0 L10 5 L0 10 z" />
+        </marker>
+      </defs>
+      <line className="tf-split" x1={336} y1={18} x2={336} y2={306} />
+      <text className="dg-kick" x={330} y={12} textAnchor="end">
         HW (MMU)
       </text>
-      <text className="dg-kick" x={316} y={10}>
+      <text className="dg-kick" x={342} y={12}>
         SW (SO)
       </text>
-      {edges.map(([a, b]) => {
-        const [x1, y1] = mid(a);
-        const [x2, y2] = mid(b);
-        return <path key={`${a}${b}`} className="tf-edge" d={`M${x1} ${y1} L${x2} ${y2}`} />;
+      {EDGES.map((e) => {
+        const l = live(e.a, e.b);
+        return (
+          <g key={`${e.a}${e.b}`} className="tf-e" data-on={l ? "" : undefined}>
+            <path className="tf-edge" d={e.d} markerEnd={`url(#${l ? "tf-on" : "tf-off"})`} />
+            {e.label ? (
+              <text className="tf-lbl" x={e.lx} y={e.ly} textAnchor={e.anchor ?? "start"}>
+                {e.label}
+              </text>
+            ) : null}
+          </g>
+        );
       })}
       {Object.entries(NODES).map(([id, n]) => (
         <g key={id} className="tf-node" data-kind={n.kind} data-on={on.has(id) ? "" : undefined}>
@@ -183,10 +221,12 @@ export function TranslationFlow() {
 /** fork() with copy-on-write: share every frame until someone writes. */
 export function CowForkDiagram() {
   const [stage, setStage] = React.useState(0);
+  useShow("cow", (key) => setStage(Math.max(0, Math.min(2, Number(key) || 0))));
   const frames = stage < 2 ? 3 : 4;
   const childTo = [0, stage >= 2 ? 3 : 1, 2];
   return (
     <Diagram
+      ns="cow"
       title="fork() con copy-on-write"
       kicker="COW en memoria"
       label="Un proceso padre y su hijo comparten los marcos tras fork. Cuando el hijo escribe en una página, se crea un marco nuevo solo para ella."
@@ -265,18 +305,24 @@ const MA = [
 export function ThreeSpacesDiagram() {
   const [sel, setSel] = React.useState<[number, number]>([0, 1]);
   const [shadow, setShadow] = React.useState(false);
+  useShow("spaces", (key) => setShadow(key === "s"));
   const g = GV[sel[0]];
   const pa = g.pa[sel[1]];
   const ma = MA[g.vm][pa];
-  const vaX = (gi: number, pi: number) => 14 + gi * 140 + pi * 40;
-  const paX = (vm: number, f: number) => 50 + vm * 280 + f * 50;
-  const maX = (m: number) => 14 + m * 45;
+  const vmX = (vm: number) => 104 + vm * 270;
+  const vaX = (gi: number, pi: number) => vmX(GV[gi].vm) + 12 + (gi % 2 ? 136 : 0) + pi * 40;
+  const paX = (vm: number, f: number) => vmX(vm) + 18 + f * 58;
+  const maX = (m: number) => 104 + m * 44;
+  const x1 = vaX(sel[0], sel[1]) + 18;
+  const x2 = paX(g.vm, pa) + 22;
+  const x3 = maX(ma) + 20;
   return (
     <Diagram
+      ns="spaces"
       title="Tres espacios de direcciones"
       kicker="Paginación virtual"
       label="Páginas de los procesos de dos máquinas virtuales, marcos virtuales de cada máquina y marcos físicos reales. Una página seleccionada muestra su camino."
-      viewBox="0 0 560 240"
+      viewBox="0 0 640 222"
       wide
       controls={
         <Choice
@@ -296,30 +342,43 @@ export function ThreeSpacesDiagram() {
         </>
       }
     >
-      <text className="dg-kick" x={4} y={12}>
-        Páginas (ELV)
-      </text>
-      <text className="dg-kick" x={16} y={84}>
-        Marcos virtuales (EFV)
-      </text>
-      <text className="dg-kick" x={4} y={192}>
-        Marcos reales (EFR · RAM del servidor)
-      </text>
+      {[
+        ["ELV", "páginas", 46],
+        ["EFV", "marcos virt.", 106],
+        ["EFR", "marcos reales", 196],
+      ].map(([k, t, y]) => (
+        <g key={k as string}>
+          <text className="ts-k" x={8} y={y as number}>
+            {k}
+          </text>
+          <text className="dg-s" x={8} y={(y as number) + 14}>
+            {t}
+          </text>
+        </g>
+      ))}
       {[0, 1].map((vm) => (
         <g key={vm}>
-          <rect className="ts-vm" x={8 + vm * 280} y={18} width={268} height={128} rx={10} />
-          <text className="dg-s" x={268 + vm * 280} y={142} textAnchor="end">
+          <rect className="ts-vm" x={vmX(vm)} y={20} width={262} height={118} rx={10} />
+          <text className="dg-s" x={vmX(vm) + 254} y={132} textAnchor="end">
             MV{vm + 1}
           </text>
         </g>
       ))}
+      {shadow ? (
+        <path className="ts-link shadow" d={`M${x1} 58 C${x1} 140 ${x3} 120 ${x3} 184`} />
+      ) : (
+        <>
+          <path className="ts-link" d={`M${x1} 58 L${x2} 94`} />
+          <path className="ts-link" d={`M${x2} 118 L${x3} 184`} />
+        </>
+      )}
       {GV.map((gv, gi) =>
         gv.pages.map((p, pi) => {
           const on = sel[0] === gi && sel[1] === pi;
           return (
             <g key={`${gi}${pi}`} className="ts-page" data-on={on ? "" : undefined} role="button" tabIndex={0} onClick={() => setSel([gi, pi])} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSel([gi, pi])}>
-              <rect x={vaX(gi, pi)} y={34} width={34} height={24} rx={4} />
-              <text x={vaX(gi, pi) + 17} y={50} textAnchor="middle">
+              <rect x={vaX(gi, pi)} y={34} width={36} height={24} rx={4} />
+              <text x={vaX(gi, pi) + 18} y={50} textAnchor="middle">
                 {gv.proc}·{p}
               </text>
             </g>
@@ -329,8 +388,8 @@ export function ThreeSpacesDiagram() {
       {[0, 1].map((vm) =>
         [0, 1, 2, 3].map((f) => (
           <g key={`${vm}${f}`} className="ts-frame" data-on={g.vm === vm && pa === f ? "" : undefined}>
-            <rect x={paX(vm, f)} y={92} width={40} height={24} rx={4} />
-            <text x={paX(vm, f) + 20} y={108} textAnchor="middle">
+            <rect x={paX(vm, f)} y={94} width={44} height={24} rx={4} />
+            <text x={paX(vm, f) + 22} y={110} textAnchor="middle">
               {f}
             </text>
           </g>
@@ -338,20 +397,12 @@ export function ThreeSpacesDiagram() {
       )}
       {Array.from({ length: 12 }, (_, m) => (
         <g key={m} className="ts-frame real" data-on={m === ma ? "" : undefined}>
-          <rect x={maX(m)} y={200} width={38} height={24} rx={4} />
-          <text x={maX(m) + 19} y={216} textAnchor="middle">
+          <rect x={maX(m)} y={184} width={40} height={24} rx={4} />
+          <text x={maX(m) + 20} y={200} textAnchor="middle">
             {m}
           </text>
         </g>
       ))}
-      {shadow ? (
-        <path className="ts-link shadow" d={`M${vaX(sel[0], sel[1]) + 17} 58 C${vaX(sel[0], sel[1]) + 17} 160 ${maX(ma) + 19} 140 ${maX(ma) + 19} 200`} />
-      ) : (
-        <>
-          <path className="ts-link" d={`M${vaX(sel[0], sel[1]) + 17} 58 L${paX(g.vm, pa) + 20} 92`} />
-          <path className="ts-link" d={`M${paX(g.vm, pa) + 20} 116 L${maX(ma) + 19} 200`} />
-        </>
-      )}
     </Diagram>
   );
 }
@@ -365,13 +416,19 @@ export function NestedWalkGrid() {
   const total = (G + 1) * (N + 1);
   const { step, playing, play, go } = useSteps(total + 1, 380);
   React.useEffect(() => go(0), [G, N]); // eslint-disable-line react-hooks/exhaustive-deps
-  const cw = Math.min(70, 430 / (N + 1));
-  const ch = Math.min(34, 200 / (G + 1));
-  const x0 = 100;
+  useShow("walk", () => {
+    setG(4);
+    setN(4);
+    window.setTimeout(play, 60);
+  });
+  const x0 = 150;
+  const cw = Math.min(64, (550 - x0) / (N + 1));
+  const ch = Math.min(34, 186 / (G + 1));
   const y0 = 22;
   const done = Math.min(step, total);
   return (
     <Diagram
+      ns="walk"
       title="(G + 1) × (N + 1) accesos"
       kicker="Nested paging / EPT"
       label="Rejilla del recorrido bidimensional: cada fila es un nivel de la tabla del guest más la dirección final; cada columna, un nivel de la tabla nested más el acceso a la entrada. Se numeran los accesos en orden."
@@ -414,21 +471,25 @@ export function NestedWalkGrid() {
           );
         }),
       )}
+      <text className="dg-kick" x={8} y={y0 + (G + 1) * ch + 28}>
+        Accesos
+      </text>
       {[
-        ["Con acierto de TLB", 1],
-        ["Sin virtualizar (G + 1)", G + 1],
-        ["Nested (G + 1)(N + 1)", total],
-      ].map(([t, v], i) => (
-        <g key={t as string}>
-          <text className="dg-s" x={x0 - 8} y={y0 + (G + 1) * ch + 26 + i * 18} textAnchor="end">
-            {t}
-          </text>
-          <rect className={i === 2 ? "dg-bar accent" : "dg-bar"} x={x0} y={y0 + (G + 1) * ch + 16 + i * 18} width={Math.max(4, ((v as number) / 36) * 420)} height={12} rx={3} />
-          <text className="dg-t" x={x0 + Math.max(4, ((v as number) / 36) * 420) + 6} y={y0 + (G + 1) * ch + 26 + i * 18}>
-            {v}
-          </text>
-        </g>
-      ))}
+        ["acierto de TLB", 1],
+        ["sin virtualizar (G+1)", G + 1],
+        ["nested (G+1)(N+1)", total],
+      ].map(([t, v], i) => {
+        const y = y0 + (G + 1) * ch + 16 + i * 18;
+        const w = Math.max(4, ((v as number) / 36) * 240);
+        return (
+          <g key={t as string}>
+            <rect className={i === 2 ? "dg-bar accent" : "dg-bar"} x={x0} y={y} width={w} height={12} rx={3} />
+            <text className="dg-s" x={x0 + w + 8} y={y + 10}>
+              <tspan className="nw-v">{v}</tspan> · {t}
+            </text>
+          </g>
+        );
+      })}
     </Diagram>
   );
 }
@@ -446,10 +507,11 @@ const EVENTS = [
 
 export function ShadowVsNested() {
   const [log, setLog] = React.useState<string[]>([]);
+  useShow("svn", (key) => EVENTS.some((e) => e.id === key) && setLog((l) => [...l, key]));
   const sum = (key: "sh" | "ne", i: 0 | 1) => log.reduce((s, id) => s + EVENTS.find((e) => e.id === id)![key][i], 0);
   const last = log.length ? EVENTS.find((e) => e.id === log[log.length - 1]) : null;
   return (
-    <figure className="dg dg-wide svn reveal">
+    <figure className="dg dg-wide svn reveal" data-ns="svn">
       <figcaption className="dg-head">
         <span className="dg-kicker">Comparativa en vivo</span>
         <strong>Shadow page tables vs nested paging</strong>
@@ -493,10 +555,11 @@ const HV = 1;
 /** Overcommit: working sets, then ballooning, then the hypervisor's private swap. */
 export function BalloonDiagram() {
   const [d3, setD3] = React.useState(3);
+  useShow("balloon", (key) => setD3(Number(key) || 3));
   const vms = [
-    { name: "MV1 · ociosa", active: 1.5, cache: 2.5 },
-    { name: "MV2 · web", active: 4, cache: 1 },
-    { name: "MV3 · base de datos", active: d3, cache: 0.5 },
+    { name: "MV1 · ociosa", active: 1.5, cache: 2 },
+    { name: "MV2 · web", active: 6.5, cache: 0.5 },
+    { name: "MV3 · base de datos", active: d3, cache: 0 },
   ];
   const demand = HV + vms.reduce((s, v) => s + v.active + v.cache, 0);
   let deficit = Math.max(0, demand - HOST);
@@ -516,12 +579,13 @@ export function BalloonDiagram() {
   let hx = 20;
   return (
     <Diagram
+      ns="balloon"
       title="Overcommit de RAM: 3 MVs de 8 GB en 16 GB"
       kicker="Multiplexación de la RAM"
       label="Barras de memoria de tres máquinas virtuales de 8 GB y de la RAM física de 16 GB. Al subir la demanda, el hipervisor infla globos y, si no basta, manda páginas a un swap privado."
       viewBox="0 0 560 250"
       wide
-      controls={<Slider label="Demanda de la MV3" value={d3} min={1} max={7.5} step={0.5} onChange={setD3} format={(v) => `${v} GB`} />}
+      controls={<Slider label="Demanda de la MV3" value={d3} min={1} max={8} step={0.5} onChange={setD3} format={(v) => `${v} GB`} />}
       note={
         phase === 0 ? (
           <><b>Todo cabe.</b> Cada MV tiene configurados 8 GB (24 GB en total: overcommit ×1,5), pero el hipervisor solo le da su <b>working set</b>, asignado bajo demanda.</>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Choice } from "../figs/common";
-import { Diagram, MiniQuiz } from "./kit";
+import { Diagram, MiniQuiz, useShow } from "./kit";
 
 type Kind = "inocua" | "priv" | "sens" | "sens-np";
 
@@ -19,17 +19,17 @@ interface Instr {
 const INSTR: Instr[] = [
   { id: "add", name: "ADD r1, r2", kind: "inocua", what: "Suma dos registros. No toca el estado del sistema: se ejecuta directamente, sin hipervisor.", at: { a: [70, 70], b: [70, 70] } },
   { id: "mov", name: "MOV r1, [x]", kind: "inocua", what: "Lee memoria del propio proceso. Inocua: ejecución directa.", at: { a: [80, 250], b: [80, 250] } },
-  { id: "hlt", name: "HLT", kind: "sens", what: "Detiene la CPU (sensible de control). Es privilegiada: en modo usuario provoca un trap y el hipervisor aprovecha para planificar otra MV.", at: { a: [300, 140], b: [255, 150] } },
-  { id: "cr3", name: "MOV CR3 (PTBR)", kind: "sens", what: "Cambia la tabla de páginas: sensible de control y privilegiada. Trap → el hipervisor emula el cambio de mapa de memoria.", at: { a: [250, 172], b: [300, 195] } },
-  { id: "io", name: "IN / OUT", kind: "sens", what: "Habla con los controladores de E/S. Privilegiada: trap → el hipervisor emula el dispositivo.", at: { a: [252, 206], b: [270, 240] } },
-  { id: "iret", name: "IRET", kind: "sens", what: "Vuelve de kernel a usuario (cambia de modo). Privilegiada: el hipervisor emula el cambio de modo virtual.", at: { a: [352, 172], b: [345, 128] } },
+  { id: "hlt", name: "HLT", kind: "sens", what: "Detiene la CPU (sensible de control). Es privilegiada: en modo usuario provoca un trap y el hipervisor aprovecha para planificar otra MV.", at: { a: [300, 148], b: [300, 150] } },
+  { id: "cr3", name: "MOV CR3 (PTBR)", kind: "sens", what: "Cambia la tabla de páginas: sensible de control y privilegiada. Trap → el hipervisor emula el cambio de mapa de memoria.", at: { a: [250, 180], b: [318, 182] } },
+  { id: "io", name: "IN / OUT", kind: "sens", what: "Habla con los controladores de E/S. Privilegiada: trap → el hipervisor emula el dispositivo.", at: { a: [245, 212], b: [300, 214] } },
+  { id: "iret", name: "IRET", kind: "sens", what: "Vuelve de kernel a usuario (cambia de modo). Privilegiada: el hipervisor emula el cambio de modo virtual.", at: { a: [355, 180], b: [400, 150] } },
   {
     id: "popf",
     name: "POPF",
     kind: "sens",
     x86: "sens-np",
     what: "Restaura los flags, incluido el de interrupciones (sensible). En x86 NO es privilegiada: en modo usuario ignora en silencio el cambio de IF, sin trap. El guest cree que ha deshabilitado interrupciones y no es así.",
-    at: { a: [350, 206], b: [455, 160] },
+    at: { a: [340, 212], b: [472, 160] },
   },
   {
     id: "sgdt",
@@ -37,7 +37,7 @@ const INSTR: Instr[] = [
     kind: "sens",
     x86: "sens-np",
     what: "Lee la dirección de tablas del sistema (sensible de comportamiento). En x86 se ejecuta en modo usuario sin trap: el guest ve las tablas reales del hipervisor y se rompe la equivalencia.",
-    at: { a: [300, 240], b: [455, 215] },
+    at: { a: [300, 242], b: [474, 206] },
   },
 ];
 
@@ -56,8 +56,17 @@ export function PopekSetsDiagram() {
   const kindOf = (i: Instr) => (x86 && i.x86 ? i.x86 : i.kind);
   const k = kindOf(sel);
   const traps = k === "sens" || k === "priv";
+  const [flash, setFlash] = React.useState<"" | "priv" | "sens">("");
+  useShow("popek", (key) => {
+    if (key === "x86") (setX86(true), setPick("popf"));
+    if (key === "ok") setX86(false);
+    if (key === "priv") (setPick("hlt"), setFlash("priv"));
+    if (key === "sens") (setPick("cr3"), setFlash("sens"));
+    window.setTimeout(() => setFlash(""), 1500);
+  });
   return (
     <Diagram
+      ns="popek"
       title="Sensibles ⊆ privilegiadas"
       kicker="Teorema 1"
       label="Diagrama de conjuntos: las instrucciones privilegiadas en un círculo y las sensibles en otro. En una máquina virtualizable las sensibles quedan dentro de las privilegiadas; en el x86 clásico algunas sensibles quedan fuera."
@@ -86,25 +95,26 @@ export function PopekSetsDiagram() {
       <text className="dg-kick" x={24} y={30}>
         Todas las instrucciones · inocuas fuera de los círculos
       </text>
-      <ellipse className="pg-priv" cx={280} cy={168} rx={150} ry={110} />
+      <ellipse className="pg-priv" data-flash={flash === "priv" ? "" : undefined} cx={280} cy={168} rx={150} ry={110} />
       <text className="dg-t pg-priv-t" x={280} y={78} textAnchor="middle">
         Privilegiadas
       </text>
-      <ellipse className="pg-sens" cx={x86 ? 360 : 300} cy={184} rx={x86 ? 150 : 96} ry={x86 ? 82 : 76} />
-      <text className="dg-t pg-sens-t" x={x86 ? 470 : 300} y={x86 ? 108 : 118} textAnchor="middle">
+      <ellipse className="pg-sens" data-flash={flash === "sens" ? "" : undefined} cx={x86 ? 390 : 300} cy={184} rx={x86 ? 145 : 118} ry={x86 ? 84 : 80} />
+      <text className="dg-t pg-sens-t" x={x86 ? 459 : 300} y={x86 ? 128 : 120} textAnchor="middle">
         Sensibles
       </text>
       {x86 ? (
-        <text className="dg-s bad-text" x={470} y={254} textAnchor="middle">
-          sensibles sin trap
+        <text className="dg-s bad-text" x={470} y={284} textAnchor="middle">
+          ↑ sensibles sin trap
         </text>
       ) : null}
       {INSTR.map((i) => {
         const [x, y] = x86 ? i.at.b : i.at.a;
         const kk = kindOf(i);
+        const w = i.name.length * 6.6 + 18;
         return (
           <g key={i.id} className="pg-chip" data-kind={kk} data-on={i.id === pick ? "" : undefined} style={{ transform: `translate(${x}px, ${y}px)` }} role="button" tabIndex={0} onClick={() => setPick(i.id)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setPick(i.id)}>
-            <rect x={-48} y={-12} width={96} height={24} rx={12} />
+            <rect x={-w / 2} y={-11} width={w} height={22} rx={11} />
             <text x={0} y={4} textAnchor="middle">
               {i.name}
             </text>
@@ -122,6 +132,11 @@ export function VcpuMatrix() {
   const [same, setSame] = React.useState(true);
   const [t1, setT1] = React.useState(true);
   const [para, setPara] = React.useState(false);
+  useShow("vcpu", (key) => {
+    setSame(key !== "emu");
+    setT1(key !== "t3");
+    setPara(key === "para");
+  });
   const row = !same ? "emu" : t1 ? "t1" : "t3";
   const col = !same ? "full" : para ? "para" : "full";
   const cell = (r: string, c: string) => r === row && c === col;
@@ -136,7 +151,7 @@ export function VcpuMatrix() {
         ? "QEMU/KVM con VT-x o AMD-V: el hardware hace que todo lo sensible provoque un exit."
         : "VMware Workstation en x86 antes de VT-x: BT para el modo kernel del guest y ejecución directa para el usuario.";
   return (
-    <figure className="dg vm-matrix reveal">
+    <figure className="dg vm-matrix reveal" data-ns="vcpu">
       <figcaption className="dg-head">
         <span className="dg-kicker">Hoja vCPU</span>
         <strong>La matriz de la CPU virtual</strong>
@@ -217,9 +232,10 @@ const TAXO = [
 /** Kind I / II / III with the two hypervisor types under Kind I. */
 export function TaxonomyDiagram() {
   const [on, setOn] = React.useState<(typeof TAXO)[number]["id"]>("full");
+  useShow("taxo", (key) => TAXO.some((x) => x.id === key) && setOn(key as (typeof TAXO)[number]["id"]));
   const t = TAXO.find((x) => x.id === on)!;
   return (
-    <Diagram title="Taxonomía de la virtualización" kicker="Clasificación" label="Árbol: virtualización se divide en full machine (tipo 1 y tipo 2), paravirtualización y otros (JVM, contenedores)." viewBox="0 0 560 210" note={<><b>{t.title}:</b> {t.text}</>}>
+    <Diagram ns="taxo" title="Taxonomía de la virtualización" kicker="Clasificación" label="Árbol: virtualización se divide en full machine (tipo 1 y tipo 2), paravirtualización y otros (JVM, contenedores)." viewBox="0 0 560 210" note={<><b>{t.title}:</b> {t.text}</>}>
       <rect className="dg-node accent" x={200} y={10} width={160} height={36} rx={18} />
       <text className="dg-t tx-root" x={280} y={33} textAnchor="middle">
         Virtualización

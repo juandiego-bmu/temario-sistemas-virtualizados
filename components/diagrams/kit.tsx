@@ -3,6 +3,34 @@
 import * as React from "react";
 import { useMounted } from "../figs/common";
 
+// "Ver en la figura": a term card names a figure (its ns) and a key; the figure listens and shows it.
+const SHOW = "asv:show";
+
+export function showIn(target: string) {
+  const ns = target.split(":")[0];
+  window.dispatchEvent(new CustomEvent(SHOW, { detail: target }));
+  const el = document.querySelector<HTMLElement>(`[data-ns="${ns}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.removeAttribute("data-flash");
+  void el.offsetWidth;
+  el.setAttribute("data-flash", "");
+  window.setTimeout(() => el.removeAttribute("data-flash"), 1600);
+}
+
+export function useShow(ns: string, on: (key: string) => void) {
+  const latest = React.useRef(on);
+  latest.current = on;
+  React.useEffect(() => {
+    const listen = (e: Event) => {
+      const [n, key = ""] = String((e as CustomEvent<string>).detail).split(":");
+      if (n === ns) latest.current(key);
+    };
+    window.addEventListener(SHOW, listen);
+    return () => window.removeEventListener(SHOW, listen);
+  }, [ns]);
+}
+
 // A flat explanatory diagram: kicker + title, the svg, optional controls and a one-line takeaway.
 export function Diagram({
   title,
@@ -12,6 +40,7 @@ export function Diagram({
   controls,
   note,
   wide,
+  ns,
   children,
 }: {
   title: string;
@@ -21,11 +50,12 @@ export function Diagram({
   controls?: React.ReactNode;
   note?: React.ReactNode;
   wide?: boolean;
+  ns?: string;
   children: React.ReactNode;
 }) {
   const mounted = useMounted();
   return (
-    <figure className={wide ? "dg dg-wide reveal" : "dg reveal"}>
+    <figure className={wide ? "dg dg-wide reveal" : "dg reveal"} data-ns={ns}>
       <figcaption className="dg-head">
         <span className="dg-kicker">{kicker}</span>
         <strong>{title}</strong>

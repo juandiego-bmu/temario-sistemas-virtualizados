@@ -8,7 +8,7 @@ import { HvVsOsDiagram, IsomorphismDiagram, ModulesDiagram, MotivationsQuiz } fr
 import { Challenges, FindTheError, QemuBuilder, TopologyLab } from "@/components/diagrams/lab";
 import { HostedNetModes, VlanDiagram } from "@/components/diagrams/network";
 import { PopekSetsDiagram, TaxonomyDiagram, TypesQuiz, VcpuMatrix } from "@/components/diagrams/popek";
-import { BridgeLab, CommandAnatomy, NetdevPairing, QemuImgLab, SlirpDiagram, WhereAmI } from "@/components/diagrams/practice";
+import { BridgeLab, CommandAnatomy, NetdevPairing, PowerSim, QemuImgLab, SlirpDiagram, WhereAmI } from "@/components/diagrams/practice";
 import { FsfreezeDiagram, VolatilityDiagram } from "@/components/diagrams/snapshots";
 import { ClonesFigure } from "@/components/figs/clones";
 import { DatastoreFigure } from "@/components/figs/datastore";
@@ -18,6 +18,7 @@ import { Flashcards } from "@/components/flashcards";
 import { MindMap } from "@/components/mindmap";
 import { TestBank } from "@/components/testbank";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Formula, T, Terms } from "@/components/terms";
 import { TopicBar } from "@/components/topic-bar";
 import { EXTRAS, PARTS, TOPICS, type TopicId } from "@/components/topics";
 
@@ -55,7 +56,7 @@ function Section({ id, lead, children, figure, diagrams }: { id: TopicId; lead: 
         </div>
       </header>
       <div className={figure ? "sec-body" : "sec-body solo"}>
-        <dl className="terms">{children}</dl>
+        <Terms>{children}</Terms>
         {figure ? <div className="sec-fig reveal">{figure}</div> : null}
       </div>
       {diagrams ? <div className="dg-grid">{diagrams}</div> : null}
@@ -79,25 +80,6 @@ function Special({ id, lead, children }: { id: (typeof EXTRAS)[number]["id"]; le
       </header>
       {children}
     </section>
-  );
-}
-
-function T({ k, children }: { k: string; children: React.ReactNode }) {
-  return (
-    <div className="term reveal">
-      <dt>{k}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
-
-function Formula({ title, children, example }: { title: string; children: React.ReactNode; example?: string }) {
-  return (
-    <div className="formula reveal">
-      <span className="formula-title">{title}</span>
-      <code>{children}</code>
-      {example ? <span className="formula-ex">{example}</span> : null}
-    </div>
   );
 }
 
@@ -151,8 +133,8 @@ export default function Page() {
           diagrams={<MotivationsQuiz />}
         >
           <T k="Virtualizar">Ofrecer recursos hardware ficticios usando implementaciones software o hardware. El software preexistente, escrito para el hardware real, debe funcionar <b>sin ninguna modificación</b>.</T>
-          <T k="Isomorfismo (definición formal)">Cada estado del sistema real (host) tiene su equivalente en el virtual (guest), y cada transición también: lo que pasa en uno pasa igual en el otro.</T>
-          <T k="Lo único que se nota">Temporizaciones atípicas: retardos extra en la E/S y pausas de CPU sin razón aparente, por la implementación y por compartir el hardware con otras MVs.</T>
+          <T k="Isomorfismo (definición formal)" show={[["Ejecutar una instrucción", "iso:run"]]}>Cada estado del sistema real (host) tiene su equivalente en el virtual (guest), y cada transición también: lo que pasa en uno pasa igual en el otro.</T>
+          <T k="Lo único que se nota" show={[["Ver el retardo con 3 MVs más", "iso:load"]]}>Temporizaciones atípicas: retardos extra en la E/S y pausas de CPU sin razón aparente, por la implementación y por compartir el hardware con otras MVs.</T>
           <T k="Motivaciones">Emular otras máquinas o SO · ejecutar software obsoleto (legacy) · simulación y experimentación (prototipos, sandboxes, what-if) · seguridad y fiabilidad por <b>aislamiento</b> · consolidación (varios SO en un hardware, despliegue masivo) · failover (migración y clonación) · balanceo de carga · green computing.</T>
           <T k="Host · guest · MV · hipervisor">Host: SO instalado en el hardware físico. Guest: SO instalado en la MV. MV: el conjunto de recursos virtualizados (CPU, RAM, disco, red). Hipervisor o VMM: el software que lo hace.</T>
           <T k="Ejemplo">Portátil → Fedora (host) → VirtualBox (hipervisor) → MV (CPU, RAM, disco y red virtuales) → Kali Linux (guest).</T>
@@ -167,10 +149,10 @@ export default function Page() {
         >
           <T k="El nombre">Los primeros sistemas operativos se llamaban «supervisores»; el hipervisor nace como su evolución.</T>
           <T k="Qué hace">Capa software (puede estar asistida por hardware) con <b>control completo</b> de los recursos físicos. Ejecuta varias MVs sobre el mismo hardware, sin modificar sus aplicaciones, y las <b>aísla</b>: una MV no accede a recursos que no se le han asignado.</T>
-          <T k="Dispatcher">Tras un trap (interrupción o excepción), decide a qué módulo llamar.</T>
-          <T k="Allocator">Asigna los recursos físicos reales a las MVs (CPU, memoria, E/S).</T>
-          <T k="Intérprete">Simula el efecto de las instrucciones que le pasa el dispatcher.</T>
-          <T k="Hipervisor vs SO">Ambos ocultan el hardware real y gestionan CPU, memoria y E/S. El SO lo ofrece como servicios de alto nivel (procesos, espacio lógico, ficheros, sockets) a procesos; el hipervisor, como hardware virtual (vCPU, RAM, disco y NIC virtuales) a MVs que ejecutan sistemas operativos.</T>
+          <T k="Dispatcher" show={[["Ver un trap", "mod:io"]]}>Tras un trap (interrupción o excepción), decide a qué módulo llamar.</T>
+          <T k="Allocator" show={[["Ver al allocator", "mod:new"]]}>Asigna los recursos físicos reales a las MVs (CPU, memoria, E/S).</T>
+          <T k="Intérprete" show={[["Ver al intérprete", "mod:iret"]]}>Simula el efecto de las instrucciones que le pasa el dispatcher.</T>
+          <T k="Hipervisor vs SO" show={[["Como SO", "hvos:so"], ["Como hipervisor", "hvos:hv"]]}>Ambos ocultan el hardware real y gestionan CPU, memoria y E/S. El SO lo ofrece como servicios de alto nivel (procesos, espacio lógico, ficheros, sockets) a procesos; el hipervisor, como hardware virtual (vCPU, RAM, disco y NIC virtuales) a MVs que ejecutan sistemas operativos.</T>
         </Section>
 
         <Section
@@ -179,21 +161,21 @@ export default function Page() {
           figure={<PopekSetsDiagram />}
           diagrams={<VcpuMatrix />}
         >
-          <T k="❶ Equivalencia">Un programa en la MV se comporta igual que en la máquina real simulada. Excepción: las temporizaciones.</T>
-          <T k="❷ Control de recursos">El hipervisor controla por completo los recursos reales y virtuales. De aquí salen el aislamiento y la seguridad.</T>
-          <T k="❸ Eficiencia">Una fracción importante de las instrucciones se ejecuta directamente, sin intervención del hipervisor.</T>
-          <T k="Privilegiadas">Generan un trap en modo usuario y solo funcionan bien en modo privilegiado.</T>
-          <T k="Sensibles">De control: cambian la configuración de recursos (cambio de modo, tabla de páginas). De comportamiento: su resultado depende de esa configuración (del modo usuario o supervisor). El resto son inocuas.</T>
-          <Formula title="Teorema 1 · virtualización estricta" example="Toda sensible genera trap → trap & emulate. Condición suficiente.">
+          <T k="❶ Equivalencia" show={[["¿Quién la pierde?", "vcpu:para"]]}>Un programa en la MV se comporta igual que en la máquina real simulada. Excepción: las temporizaciones.</T>
+          <T k="❷ Control de recursos" show={[["Ver en la matriz", "vcpu:t1"]]}>El hipervisor controla por completo los recursos reales y virtuales. De aquí salen el aislamiento y la seguridad.</T>
+          <T k="❸ Eficiencia" show={[["¿Quién la pierde?", "vcpu:emu"]]}>Una fracción importante de las instrucciones se ejecuta directamente, sin intervención del hipervisor.</T>
+          <T k="Privilegiadas" show={[["Ver el conjunto", "popek:priv"]]}>Generan un trap en modo usuario y solo funcionan bien en modo privilegiado.</T>
+          <T k="Sensibles" show={[["Ver el conjunto", "popek:sens"]]}>De control: cambian la configuración de recursos (cambio de modo, tabla de páginas). De comportamiento: su resultado depende de esa configuración (del modo usuario o supervisor). El resto son inocuas.</T>
+          <Formula title="Teorema 1 · virtualización estricta" show={[["Ver en el diagrama", "popek:ok"]]} example="Toda sensible genera trap → trap & emulate. Condición suficiente.">
             sensibles ⊆ privilegiadas
           </Formula>
           <Formula title="Teorema 2 · virtualización recursiva" example="Una MV dentro de una MV dentro de… No siempre posible (Inception).">
             virtualizable + VMM sin dependencias temporales
           </Formula>
-          <Formula title="Teorema 3 · virtualización híbrida" example="Se interpreta todo lo que el guest ejecuta en modo kernel: pierde eficiencia. Y siempre nos quedará la emulación.">
+          <Formula title="Teorema 3 · virtualización híbrida" show={[["Ver en la matriz", "vcpu:t3"]]} example="Se interpreta todo lo que el guest ejecuta en modo kernel: pierde eficiencia. Y siempre nos quedará la emulación.">
             sensibles de usuario ⊆ privilegiadas
           </Formula>
-          <T k="El x86 clásico">No cumple el teorema 1: tiene sensibles no privilegiadas (POPF, SGDT/SIDT…; un estudio del año 2000 encontró 17) que en modo usuario no generan trap. Por eso se inventaron la traducción binaria, la implementación híbrida y luego VT-x / AMD-V.</T>
+          <T k="El x86 clásico" show={[["Verlo en x86", "popek:x86"]]}>No cumple el teorema 1: tiene sensibles no privilegiadas (POPF, SGDT/SIDT…; un estudio del año 2000 encontró 17) que en modo usuario no generan trap. Por eso se inventaron la traducción binaria, la implementación híbrida y luego VT-x / AMD-V.</T>
         </Section>
 
         <Section
@@ -207,12 +189,12 @@ export default function Page() {
             </>
           }
         >
-          <T k="Full virtualization">El SO guest está totalmente desacoplado del hardware por el hipervisor: no sabe que está virtualizado y no se modifica.</T>
-          <T k="Paravirtualización">Comunicación explícita guest–hipervisor: se modifica el kernel del guest para cambiar las instrucciones no virtualizables por <b>hypercalls</b>, y se usan hypercalls para memoria, interrupciones y reloj. Más eficiente. Los drivers <b>virtio</b> de QEMU son paravirtualizados.</T>
-          <T k="Tipo 2 · hosted">El código de la vCPU corre en un proceso normal del SO host, en modo usuario; un módulo en el kernel del host intercepta lo privilegiado; la E/S se emula con los servicios del host (el disco virtual es un fichero). VirtualBox, VMware Workstation/Player/Fusion, Parallels, <b>QEMU/KVM</b>.</T>
-          <T k="Tipo 1 · native / bare metal">El hipervisor es un kernel propio sin SO debajo y hace la E/S con sus propios drivers. VMware ESXi.</T>
-          <T k="Tipo 1 con dominio 0">La E/S se implementa a través de una MV privilegiada (Dom0, partición padre) con acceso al hardware y los drivers de un SO existente. Xen (con Linux), Hyper-V.</T>
-          <T k="Kind III">Runtimes de lenguajes (JVM) y contenedores: no son MVs sino virtualización a nivel de sistema operativo.</T>
+          <T k="Full virtualization" show={[["Ver en la taxonomía", "taxo:full"]]}>El SO guest está totalmente desacoplado del hardware por el hipervisor: no sabe que está virtualizado y no se modifica.</T>
+          <T k="Paravirtualización" show={[["Ver en la taxonomía", "taxo:para"]]}>Comunicación explícita guest–hipervisor: se modifica el kernel del guest para cambiar las instrucciones no virtualizables por <b>hypercalls</b>, y se usan hypercalls para memoria, interrupciones y reloj. Más eficiente. Los drivers <b>virtio</b> de QEMU son paravirtualizados.</T>
+          <T k="Tipo 2 · hosted" show={[["Verlo en 3D", "stack:t2"]]}>El código de la vCPU corre en un proceso normal del SO host, en modo usuario; un módulo en el kernel del host intercepta lo privilegiado; la E/S se emula con los servicios del host (el disco virtual es un fichero). VirtualBox, VMware Workstation/Player/Fusion, Parallels, <b>QEMU/KVM</b>.</T>
+          <T k="Tipo 1 · native / bare metal" show={[["Verlo en 3D", "stack:t1"]]}>El hipervisor es un kernel propio sin SO debajo y hace la E/S con sus propios drivers. VMware ESXi.</T>
+          <T k="Tipo 1 con dominio 0" show={[["Verlo en 3D", "stack:dom0"]]}>La E/S se implementa a través de una MV privilegiada (Dom0, partición padre) con acceso al hardware y los drivers de un SO existente. Xen (con Linux), Hyper-V.</T>
+          <T k="Kind III" show={[["Ver en la taxonomía", "taxo:other"]]}>Runtimes de lenguajes (JVM) y contenedores: no son MVs sino virtualización a nivel de sistema operativo.</T>
         </Section>
 
         {/* ------------------------------------------------------------ PARTE II */}
@@ -230,11 +212,11 @@ export default function Page() {
             </>
           }
         >
-          <T k="Emulación (V ≠ R)">Un intérprete decodifica y simula una a una las instrucciones de la vCPU sobre estructuras de datos (registros, PIC, timers, controladores). Lo más flexible y lo más lento.</T>
-          <T k="Traducción binaria">Con V = R: el hipervisor revisa el código del guest por <b>bloques básicos</b>, sustituye las privilegiadas por código seguro y llamadas a rutinas de emulación, y lo guarda en la Translation Cache, que se ejecuta en modo usuario. Problemas: código automodificable o autorreferente y sincronizar el vPC con las interrupciones.</T>
-          <T k="Trap & emulate">El guest corre <b>desprivilegiado</b>: cada privilegiada provoca una excepción y el hipervisor emula su efecto, también la E/S (IN/OUT). Rápido, pero con overhead por excepción y con shadow registers para todo el estado privilegiado. No sirve en CPUs no virtualizables (x86).</T>
-          <T k="Híbrida">Trap & emulate para el modo usuario del guest y traducción binaria solo para su modo kernel. Patente de VMware (2002).</T>
-          <T k="Hardware (Intel VT-x, AMD-V)">Nuevo modo guest pseudoprivilegiado: el guest ejecuta parte de lo privilegiado (sus syscalls) sin salir; IN/OUT e interrupciones provocan <b>exits</b>. El <b>VMCB</b> guarda en memoria los shadow registers, la máscara de instrucciones que salen y el diagnóstico del exit. <code>vmrun</code> entra en modo guest.</T>
+          <T k="Emulación (V ≠ R)" show={[["Paso a paso", "emu:syscall"]]}>Un intérprete decodifica y simula una a una las instrucciones de la vCPU sobre estructuras de datos (registros, PIC, timers, controladores). Lo más flexible y lo más lento.</T>
+          <T k="Traducción binaria" show={[["Bloque con privilegiadas", "bt:priv"], ["Saltos", "bt:flow"]]}>Con V = R: el hipervisor revisa el código del guest por <b>bloques básicos</b>, sustituye las privilegiadas por código seguro y llamadas a rutinas de emulación, y lo guarda en la Translation Cache, que se ejecuta en modo usuario. Problemas: código automodificable o autorreferente y sincronizar el vPC con las interrupciones.</T>
+          <T k="Trap & emulate" show={[["Ver los 3 traps", "trap:te"]]}>El guest corre <b>desprivilegiado</b>: cada privilegiada provoca una excepción y el hipervisor emula su efecto, también la E/S (IN/OUT). Rápido, pero con overhead por excepción y con shadow registers para todo el estado privilegiado. No sirve en CPUs no virtualizables (x86).</T>
+          <T k="Híbrida" show={[["Ver el flujo", "hybrid:k"]]}>Trap & emulate para el modo usuario del guest y traducción binaria solo para su modo kernel. Patente de VMware (2002).</T>
+          <T k="Hardware (Intel VT-x, AMD-V)" show={[["Ver el único exit", "trap:hw"]]}>Nuevo modo guest pseudoprivilegiado: el guest ejecuta parte de lo privilegiado (sus syscalls) sin salir; IN/OUT e interrupciones provocan <b>exits</b>. El <b>VMCB</b> guarda en memoria los shadow registers, la máscara de instrucciones que salen y el diagnóstico del exit. <code>vmrun</code> entra en modo guest.</T>
           <T k="Resumen del tema">Hace falta un mecanismo para <b>interceptar</b> los accesos al hardware y software para <b>emular</b> los recursos. El hardware de virtualización solo acelera la intercepción.</T>
           <Exam>QEMU sin <code>--enable-kvm</code> usa TCG, traducción binaria dinámica (incluso de otra arquitectura). Con KVM usa VT-x / AMD-V.</Exam>
         </Section>
@@ -246,10 +228,10 @@ export default function Page() {
           diagrams={<CpuVisibility />}
         >
           <T k="Emulación de la vCPU">Por software o con soporte hardware. Mejor rendimiento: híbrida o trap & emulate (con VT-x / AMD-V). Siempre se construye un modo pseudoprivilegiado para la MV.</T>
-          <T k="Visibilidad">CPU más antigua emulada: sencilla, portable (migración) y sin incompatibilidades con programas antiguos. Visibilidad total de la CPU real: aprovecha instrucciones avanzadas, pero ata al modelo exacto.</T>
+          <T k="Visibilidad" show={[["-cpu host", "cpuvis:host"], ["-cpu qemu64", "cpuvis:old"]]}>CPU más antigua emulada: sencilla, portable (migración) y sin incompatibilidades con programas antiguos. Visibilidad total de la CPU real: aprovecha instrucciones avanzadas, pero ata al modelo exacto.</T>
           <T k="Round-robin">El hipervisor reparte la CPU real entre MVs y permite definir políticas de reparto.</T>
-          <T k="Expulsión por HALT">El guest ejecuta HALT cuando no tiene trabajo (el proceso idle lo hace). Es privilegiada: el hipervisor la detecta y planifica otra MV.</T>
-          <T k="Expulsión por timeout">Si una MV no hace HALT durante su cuanto, el hipervisor la interrumpe.</T>
+          <T k="Expulsión por HALT" show={[["Ver los HLT", "sched:inter"]]}>El guest ejecuta HALT cuando no tiene trabajo (el proceso idle lo hace). Es privilegiada: el hipervisor la detecta y planifica otra MV.</T>
+          <T k="Expulsión por timeout" show={[["Ver los timeouts", "sched:busy"]]}>Si una MV no hace HALT durante su cuanto, el hipervisor la interrumpe.</T>
           <T k="Consecuencia">Dentro de la MV se ven tiempos de espera inexplicables mientras se ejecutan otras MVs.</T>
         </Section>
 
@@ -265,14 +247,14 @@ export default function Page() {
           }
         >
           <T k="Objetivos">Espacio lógico por proceso, espacios grandes, compartir memoria, maximizar la multiprogramación, protección, rendimiento y bajo coste.</T>
-          <T k="Paginación">Páginas (lógico) y marcos (físico) del mismo tamaño (4 KB a 1 GB, normalmente 4 KB). Una tabla de páginas por proceso. Sin fragmentación externa, con fragmentación interna. La MMU usa el <b>PTBR</b> (en el PCB) y concatena marco + desplazamiento.</T>
-          <Formula title="Ejemplo de clase" example="32 bits, 1 GB de RAM, páginas de 4 KB: 1 M entradas de 18 + 1 bits → 4 B → 4 MB por proceso">
+          <T k="Paginación" show={[["Calcularlo", "calc:example"]]}>Páginas (lógico) y marcos (físico) del mismo tamaño (4 KB a 1 GB, normalmente 4 KB). Una tabla de páginas por proceso. Sin fragmentación externa, con fragmentación interna. La MMU usa el <b>PTBR</b> (en el PCB) y concatena marco + desplazamiento.</T>
+          <Formula title="Ejemplo de clase" show={[["Calcularlo", "calc:example"]]} example="32 bits, 1 GB de RAM, páginas de 4 KB: 1 M entradas de 18 + 1 bits → 4 B → 4 MB por proceso">
             tamaño TP = nº páginas × tamaño de entrada
           </Formula>
-          <T k="Multinivel">Se pagina la tabla. En el ejemplo: 10 + 10 + 12 bits; un proceso de 16 MB pasa de 4 MB de tabla a 5 marcos = 20 KB. Coste: N + 1 accesos con N niveles (3–5 niveles es lo habitual).</T>
-          <T k="TLB">Caché de pares (página, marco). En cada cambio de contexto se vacía o se etiqueta con el PID.</T>
-          <T k="Memoria virtual">Bit P de presencia (y V, dirty, acceso, permisos). Si P = 0, fallo de página: la RTI trae la página del swap (quizá echando otra), actualiza la tabla y reintenta la instrucción. Carga bajo demanda, prepaginación o prefetch.</T>
-          <T k="Copy-on-write">fork() comparte los marcos del padre marcados COW; la primera escritura crea un marco nuevo. Es la misma idea que los snapshots de disco.</T>
+          <T k="Multinivel" show={[["Calcularlo", "calc:example"]]}>Se pagina la tabla. En el ejemplo: 10 + 10 + 12 bits; un proceso de 16 MB pasa de 4 MB de tabla a 5 marcos = 20 KB. Coste: N + 1 accesos con N niveles (3–5 niveles es lo habitual).</T>
+          <T k="TLB" show={[["Acierto de TLB", "flow:hit"]]}>Caché de pares (página, marco). En cada cambio de contexto se vacía o se etiqueta con el PID.</T>
+          <T k="Memoria virtual" show={[["Fallo de página", "flow:free"], ["Sin marco libre", "flow:evict"]]}>Bit P de presencia (y V, dirty, acceso, permisos). Si P = 0, fallo de página: la RTI trae la página del swap (quizá echando otra), actualiza la tabla y reintenta la instrucción. Carga bajo demanda, prepaginación o prefetch.</T>
+          <T k="Copy-on-write" show={[["Ver fork()", "cow:2"]]}>fork() comparte los marcos del padre marcados COW; la primera escritura crea un marco nuevo. Es la misma idea que los snapshots de disco.</T>
           <T k="DLL / .so">Un stub carga la rutina en la primera llamada (PIC, GOT y PLT en Linux). Ejecutables más pequeños y código compartido; a cambio dependen de las bibliotecas instaladas.</T>
         </Section>
 
@@ -288,15 +270,15 @@ export default function Page() {
             </>
           }
         >
-          <T k="Tres espacios">Lógico virtual (ELV) → físico virtual (EFV, lo que el guest cree que es su RAM) → físico real (EFR). Hay que emular la RAM física de la MV y su MMU.</T>
-          <T k="Shadow page tables">Software: el hipervisor intercepta todo lo que programa la MMU virtual y carga en la real una tabla <b>directa ELV → EFR</b>, una por proceso de cada MV. Marca las tablas del guest como solo lectura para enterarse de sus cambios. Sin modificar el guest, pero con mucho overhead de memoria y exits.</T>
-          <T k="True y hidden page faults">True: la página no está ni en la MV ni en la máquina real. Hidden: el guest cree que está (P = 1) pero el hipervisor le quitó el marco.</T>
-          <T k="Nested paging / EPT">Hardware (AMD NPT o RVI, Intel EPT): tablas del guest (ELV → EFV) + tablas nested (EFV → EFR), dos punteros (gCR3, nCR3). Una tabla nested por MV. La TLB guarda la traducción final y es crítica.</T>
-          <Formula title="Accesos por un fallo de TLB con nested paging" example="G = N = 4 → 25 accesos (sin virtualizar, 5)">
+          <T k="Tres espacios" show={[["Ver el camino", "spaces:n"]]}>Lógico virtual (ELV) → físico virtual (EFV, lo que el guest cree que es su RAM) → físico real (EFR). Hay que emular la RAM física de la MV y su MMU.</T>
+          <T k="Shadow page tables" show={[["Ver la tabla sombra", "spaces:s"]]}>Software: el hipervisor intercepta todo lo que programa la MMU virtual y carga en la real una tabla <b>directa ELV → EFR</b>, una por proceso de cada MV. Marca las tablas del guest como solo lectura para enterarse de sus cambios. Sin modificar el guest, pero con mucho overhead de memoria y exits.</T>
+          <T k="True y hidden page faults" show={[["Provocar uno", "svn:rec"]]}>True: la página no está ni en la MV ni en la máquina real. Hidden: el guest cree que está (P = 1) pero el hipervisor le quitó el marco.</T>
+          <T k="Nested paging / EPT" show={[["Ver el recorrido 2D", "walk:play"]]}>Hardware (AMD NPT o RVI, Intel EPT): tablas del guest (ELV → EFV) + tablas nested (EFV → EFR), dos punteros (gCR3, nCR3). Una tabla nested por MV. La TLB guarda la traducción final y es crítica.</T>
+          <Formula title="Accesos por un fallo de TLB con nested paging" show={[["Animarlo", "walk:play"]]} example="G = N = 4 → 25 accesos (sin virtualizar, 5)">
             (G + 1) × (N + 1)
           </Formula>
-          <T k="Working set">El hipervisor da a cada MV solo la memoria que usa (bajo demanda) y mantiene las páginas accedidas en una ventana de tiempo.</T>
-          <T k="Overcommit">La RAM virtual en uso puede superar la física. El hipervisor reclama memoria no usada (<b>ballooning</b>) y, si no basta, usa un <b>swap privado por MV, invisible para el guest</b>.</T>
+          <T k="Working set" show={[["Verlo", "balloon:3"]]}>El hipervisor da a cada MV solo la memoria que usa (bajo demanda) y mantiene las páginas accedidas en una ventana de tiempo.</T>
+          <T k="Overcommit" show={[["Ballooning", "balloon:6"], ["Swap privado", "balloon:8"]]}>La RAM virtual en uso puede superar la física. El hipervisor reclama memoria no usada (<b>ballooning</b>) y, si no basta, usa un <b>swap privado por MV, invisible para el guest</b>.</T>
         </Section>
 
         <Section
@@ -313,12 +295,12 @@ export default function Page() {
             </>
           }
         >
-          <T k="LUN y LBA">SCSI expone unidades lógicas (LUN) de bloques uniformes direccionados por LBA; la geometría no se ve. Siempre el mismo modelo de dispositivo y el mismo driver en el guest.</T>
-          <T k="Volumen físico (by-pass)">Menos retardo, menos portable. Para aplicaciones críticas o migrar un servidor existente.</T>
-          <T k="Fichero en el FS del hipervisor">Más latencia y menos velocidad, pero portable y flexible; puede no reservar el espacio libre (ventaja y riesgo: fragmentación y over-provisioning).</T>
-          <T k="Thick">Todo reservado al crear (nunca hay overcommit). <b>Eager-zeroed</b>: todo a cero al crear, lento, el mejor rendimiento. <b>Lazy-zeroed</b>: a cero en la primera escritura. Los bloques se ponen a cero por seguridad.</T>
-          <T k="Thin">Reserva bajo demanda: solo ocupa lo escrito. Cada primera escritura busca bloque libre, lo pone a cero y escribe. Fragmenta (en HDD el acceso aleatorio es más lento) y permite over-provisioning.</T>
-          <T k="Flat vs index">Flat: el bloque N está en la posición N; sin copy-on-write, clonar es duplicar todo. Index (qcow2): un mapa de bloques con copy-on-write, backing files y snapshots baratos, a cambio de consultar el índice.</T>
+          <T k="LUN y LBA" show={[["Ver el LUN", "scsi:file"]]}>SCSI expone unidades lógicas (LUN) de bloques uniformes direccionados por LBA; la geometría no se ve. Siempre el mismo modelo de dispositivo y el mismo driver en el guest.</T>
+          <T k="Volumen físico (by-pass)" show={[["Verlo", "scsi:vol"]]}>Menos retardo, menos portable. Para aplicaciones críticas o migrar un servidor existente.</T>
+          <T k="Fichero en el FS del hipervisor" show={[["Verlo", "scsi:file"]]}>Más latencia y menos velocidad, pero portable y flexible; puede no reservar el espacio libre (ventaja y riesgo: fragmentación y over-provisioning).</T>
+          <T k="Thick" show={[["Datastore todo thick", "ds:thick"], ["Coste eager", "prov:eager"]]}>Todo reservado al crear (nunca hay overcommit). <b>Eager-zeroed</b>: todo a cero al crear, lento, el mejor rendimiento. <b>Lazy-zeroed</b>: a cero en la primera escritura. Los bloques se ponen a cero por seguridad.</T>
+          <T k="Thin" show={[["Llenar el datastore", "ds:full"], ["Coste thin", "prov:thin"]]}>Reserva bajo demanda: solo ocupa lo escrito. Cada primera escritura busca bloque libre, lo pone a cero y escribe. Fragmenta (en HDD el acceso aleatorio es más lento) y permite over-provisioning.</T>
+          <T k="Flat vs index" show={[["Rellenar la matriz", "fi:go"]]}>Flat: el bloque N está en la posición N; sin copy-on-write, clonar es duplicar todo. Index (qcow2): un mapa de bloques con copy-on-write, backing files y snapshots baratos, a cambio de consultar el índice.</T>
           <Exam>Saber rellenar la matriz thin/thick × flat/index y sus ventajas: thin ocupa solo lo escrito; thick nunca hace overcommit; flat no tiene CoW; index sí, y es mucho más económico al clonar.</Exam>
         </Section>
 
@@ -338,13 +320,13 @@ export default function Page() {
             </>
           }
         >
-          <T k="Snapshot">Estado congelado de un sistema para poder volver atrás. De un disco, o de una MV completa con RAM y varios discos (<b>checkpoint</b>).</T>
-          <T k="Cómo funciona (CoW)">El volumen actual pasa a solo lectura y se crea un <b>delta</b> vacío. Escrituras → delta. Lecturas → delta y, si no está, el volumen congelado. Penaliza: reservar espacio al escribir y consultar el índice al leer.</T>
+          <T k="Snapshot" show={[["Hacer un snapshot", "snap:snap"]]}>Estado congelado de un sistema para poder volver atrás. De un disco, o de una MV completa con RAM y varios discos (<b>checkpoint</b>).</T>
+          <T k="Cómo funciona (CoW)" show={[["Leer un bloque", "snap:read"], ["Escribir uno", "snap:write"]]}>El volumen actual pasa a solo lectura y se crea un <b>delta</b> vacío. Escrituras → delta. Lecturas → delta y, si no está, el volumen congelado. Penaliza: reservar espacio al escribir y consultar el índice al leer.</T>
           <T k="Snapshot de una MV">Discos + RAM + configuración hardware. Recupera desastres al instante: malas configuraciones, virus, actualizaciones inestables, pruebas what-if (software healing).</T>
-          <T k="Revert">Muy rápido: se descarta el delta actual y se crea uno nuevo sobre el snapshot elegido (y se carga su RAM si es un checkpoint).</T>
-          <T k="Delete">Elimina un delta y suele implicar <b>consolidar</b> (incorporarlo al siguiente o al base); si no, corrupción. Delete all: los deltas al base en orden de creación. Tarda según lo que haya que consolidar.</T>
-          <T k="Clones y plantillas">Copias de MVs que ahorran instalar y configurar. Un prototipo bloqueado es una plantilla (template).</T>
-          <T k="Full vs linked">Full: copia completa e independiente. Linked: snapshot de la plantilla que solo guarda lo que cambia el clon; instantáneo, ligero y con mejor caché de lectura, pero no se puede tocar la plantilla. Ideal para escritorios virtuales con un broker (Leostream, Citrix).</T>
+          <T k="Revert" show={[["Revertir", "snap:revert"]]}>Muy rápido: se descarta el delta actual y se crea uno nuevo sobre el snapshot elegido (y se carga su RAM si es un checkpoint).</T>
+          <T k="Delete" show={[["Eliminar y consolidar", "snap:delete"]]}>Elimina un delta y suele implicar <b>consolidar</b> (incorporarlo al siguiente o al base); si no, corrupción. Delete all: los deltas al base en orden de creación. Tarda según lo que haya que consolidar.</T>
+          <T k="Clones y plantillas" show={[["Tocar la plantilla", "clones:touch"]]}>Copias de MVs que ahorran instalar y configurar. Un prototipo bloqueado es una plantilla (template).</T>
+          <T k="Full vs linked" show={[["Linked", "clones:linked"], ["Full", "clones:full"]]}>Full: copia completa e independiente. Linked: snapshot de la plantilla que solo guarda lo que cambia el clon; instantáneo, ligero y con mejor caché de lectura, pero no se puede tocar la plantilla. Ideal para escritorios virtuales con un broker (Leostream, Citrix).</T>
         </Section>
 
         <Section
@@ -354,11 +336,11 @@ export default function Page() {
           diagrams={<VlanDiagram />}
         >
           <T k="NIC virtual">Cada una con su MAC única, conectada a la LAN virtual que elija el administrador. Se emulan tarjetas populares (Intel e1000, PCnet) para usar drivers estándar, u optimizadas con driver especial (virtio, vmxnet).</T>
-          <T k="Bridged">La NIC real hace de puente Ethernet (nivel 2): visibilidad total de la LAN externa.</T>
-          <T k="NAT">Un router con NAT con la IP del host: visibilidad a nivel IP con las limitaciones de NAT (desde fuera no se entra).</T>
-          <T k="Host-only">LAN sin NIC real, aislada del exterior: para comunicar MVs.</T>
-          <T k="vSwitch (native)">Con 0 NICs reales está aislado; con varias, balanceo o fail-over. Cada NIC real es un enlace punto a punto con un switch externo.</T>
-          <T k="VLAN 802.1q">Grupos de puertos con una etiqueta de VLAN. Las NICs reales trabajan en modo <b>trunk</b> llevando varias VLAN etiquetadas; el switch externo también debe soportar 802.1q.</T>
+          <T k="Bridged" show={[["Probarlo", "net:bridged"]]}>La NIC real hace de puente Ethernet (nivel 2): visibilidad total de la LAN externa.</T>
+          <T k="NAT" show={[["Probarlo", "net:nat"]]}>Un router con NAT con la IP del host: visibilidad a nivel IP con las limitaciones de NAT (desde fuera no se entra).</T>
+          <T k="Host-only" show={[["Probarlo", "net:host"]]}>LAN sin NIC real, aislada del exterior: para comunicar MVs.</T>
+          <T k="vSwitch (native)" show={[["Grupo aislado", "vlan:iso"]]}>Con 0 NICs reales está aislado; con varias, balanceo o fail-over. Cada NIC real es un enlace punto a punto con un switch externo.</T>
+          <T k="VLAN 802.1q" show={[["Ver la etiqueta", "vlan:g2"]]}>Grupos de puertos con una etiqueta de VLAN. Las NICs reales trabajan en modo <b>trunk</b> llevando varias VLAN etiquetadas; el switch externo también debe soportar 802.1q.</T>
           <T k="Implementación">Entre MVs del mismo vSwitch, copia entre buffers de memoria (rapidísimo). Hacia fuera, cada MV emite con su MAC y la NIC real recibe en modo promiscuo y reparte por MAC.</T>
         </Section>
 
@@ -373,80 +355,22 @@ export default function Page() {
             <>
               <QemuImgLab />
               <CommandAnatomy />
-              <figure className="dg reveal">
-                <figcaption className="dg-head">
-                  <span className="dg-kicker">Acciones de energía</span>
-                  <strong>Duro vs suave</strong>
-                </figcaption>
-                <table className="pw-table">
-                  <thead>
-                    <tr>
-                      <th>Acción</th>
-                      <th>Hipervisor</th>
-                      <th>Agente</th>
-                      <th>Dentro del guest</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <th>Power on</th>
-                      <td>Sí</td>
-                      <td>—</td>
-                      <td>—</td>
-                    </tr>
-                    <tr>
-                      <th>Power off (duro)</th>
-                      <td>Sí</td>
-                      <td>Sí</td>
-                      <td>
-                        <code>poweroff -f -n -d0</code>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th>Reset (duro)</th>
-                      <td>Sí</td>
-                      <td>Sí</td>
-                      <td>
-                        <code>reboot -f -n -d0</code>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th>Shutdown (suave)</th>
-                      <td>Evento ACPI</td>
-                      <td>Sí</td>
-                      <td>
-                        <code>poweroff</code>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th>Reboot (suave)</th>
-                      <td>—</td>
-                      <td>Sí</td>
-                      <td>
-                        <code>reboot</code>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p className="dg-note">
-                  En el duro el guest no tiene tiempo de hacer nada (como tirar del cable: <b>Ctrl+A x</b>). En el suave el guest ejecuta su secuencia de apagado.
-                </p>
-              </figure>
+              <PowerSim />
             </>
           }
         >
-          <T k="Entorno">VPN DACALUM → <code>ssh root@IP</code> a KVM1 o KVM2. Los servidores no tienen Internet: las imágenes se bajan con <code>wget</code> de www.ho.ac.uma.es. DNS: 10.0.SS.NNN → vm-SS-NNN.ho.ac.uma.es.</T>
+          <T k="Entorno" show={[["¿Dónde estoy?", "where:1"]]}>VPN DACALUM → <code>ssh root@IP</code> a KVM1 o KVM2. Los servidores no tienen Internet: las imágenes se bajan con <code>wget</code> de www.ho.ac.uma.es. DNS: 10.0.SS.NNN → vm-SS-NNN.ho.ac.uma.es.</T>
           <T k="Control de MVs">Desde el hipervisor: consola (pocas MVs), <b>QMP</b> (scripts, varias MVs), vCenter (clúster). Desde el guest: SSH (Ansible para muchas) o un agente (qemu-guest-agent, VMware Tools).</T>
-          <T k="Discos">
+          <T k="Discos" show={[["Simulador de qemu-img", "qil:go"]]}>
             Base en <code>/exports/VMs</code>, enlace simbólico en <code>/home/VMs</code> y linked clones:
             <Cmd>{"qemu-img create -F qcow2 -f qcow2 -b alpine-base.qcow2 alpine-ssh1.qcow2\nqemu-img info --backing-chain alpine-ssh1.qcow2"}</Cmd>
           </T>
-          <T k="Arrancar">
+          <T k="Arrancar" show={[["Anatomía del comando", "anat:basico"]]}>
             <Cmd>{"qemu-system-x86_64 -nographic -m 1G -smp 1 --enable-kvm alpine-ssh1.qcow2"}</Cmd>
             <b>Ctrl+A x</b> la mata; <b>Ctrl+A c</b> abre el monitor de QEMU; <code>poweroff</code> dentro la apaga bien.
           </T>
           <T k="Pantalla negra">El kernel escribe en una pantalla que no existe con <code>-nographic</code>. Añade <code>console=ttyS0</code> (Tab en el menú, o para siempre en <code>/boot/extlinux.conf</code> de la <b>base</b>: los clones lo heredan).</T>
-          <T k="Telnet y corrección">
+          <T k="Telnet y corrección" show={[["Comando de corrección", "anat:qmp"], ["Telnet", "anat:telnet"]]}>
             <code>-serial mon:telnet::5000,server=on,wait=off</code> + <code>firewall-cmd --add-port=5000/tcp</code>. Para la corrección: <code>-name</code> y <code>-qmp unix:…sock</code>, en segundo plano con <code>{"< /dev/null &"}</code>.
           </T>
           <Exam>Antes de un <code>poweroff</code>, mira el prompt: <code>[root@vm-16-173 ~]#</code> es el servidor (lo apagarías entero); <code>localhost:~#</code> es la MV.</Exam>
@@ -463,17 +387,17 @@ export default function Page() {
             </>
           }
         >
-          <T k="Frontend">
+          <T k="Frontend" show={[["Emparejarlo", "pair:good"], ["Con un error", "pair:bad"]]}>
             <code>-device tipo,netdev=ID</code>: e1000 (Intel, común), rtl8139 (antigua) o virtio-net (la más rápida, driver paravirtualizado). Sin red: <code>-nic none</code> o <code>-nodefaults</code>.
           </T>
           <T k="Backends">
             <b>user</b> (SLiRP, por defecto: sin root, limitado, sin ping) · <b>tap</b> (interfaz del host, root, mejor rendimiento) · <b>bridge</b> (tap automático en un bridge existente) · <b>VDE</b> (redes complejas) · <b>socket</b> (unir MVs sin root).
           </T>
-          <T k="Red user">NAT interno: la MV recibe 10.0.2.15, el host es 10.0.2.2 (la puerta de enlace) y el DNS 10.0.2.3. Desde fuera no se entra: como un cortafuegos que bloquea todo lo entrante.</T>
-          <T k="hostfwd">
+          <T k="Red user" show={[["Probar SLiRP", "slirp:vmhost"]]}>NAT interno: la MV recibe 10.0.2.15, el host es 10.0.2.2 (la puerta de enlace) y el DNS 10.0.2.3. Desde fuera no se entra: como un cortafuegos que bloquea todo lo entrante.</T>
+          <T k="hostfwd" show={[["Probar hostfwd", "slirp:fwd"]]}>
             <code>-netdev user,id=n0,hostfwd=tcp::8080-:80</code>: lo que llega al 8080 del host va al 80 del guest (host a la izquierda). Abre el puerto en el firewall para entrar desde fuera (y con <code>--permanent</code> para que dure).
           </T>
-          <T k="Bridge privado">
+          <T k="Bridge privado" show={[["Montarlo paso a paso", "bridge:play"]]}>
             <code>nmcli connection add type bridge … ifname br1 …</code>, <code>allow br1</code> en <code>/etc/qemu/bridge.conf</code> y <code>-netdev bridge,br=br1,id=…</code>. MAC, disco y puerto distintos por MV. Sin NIC real: red privada (host-only).
           </T>
           <T k="Limpiar">
