@@ -103,8 +103,9 @@ export default function Page() {
         </h1>
         <p className="hero-sub">Todo el primer parcial (temas 1 y 2, prácticas 1 y 2) convertido en máquinas que se mueven, diagramas con los que puedes jugar y un banco de preguntas tipo test. Cada tema tiene su color; la barra de arriba te dice siempre dónde estás.</p>
         <div className="hero-chips">
-          <Countdown />
-          <span className="countdown ghost">Teoría: test · Práctica: QEMU/KVM en el laboratorio</span>
+          <Countdown at="2026-11-06T12:45:00+01:00" label="Examen de laboratorio" when="vie 6 nov, 12:45" />
+          <Countdown at="2026-11-12T08:00:00+01:00" label="Primer parcial" when="12–14 nov" />
+          <span className="countdown ghost">Laboratorio: preguntas de QEMU + ejercicio con KVM · labs 2.1.9a/b</span>
           <span className="countdown ghost">Hay que sacar más de un 4 en cada parcial</span>
         </div>
         <nav className="map" aria-label="Temario">
