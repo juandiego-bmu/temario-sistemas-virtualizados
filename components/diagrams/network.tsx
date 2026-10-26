@@ -153,7 +153,7 @@ export function HostedNetModes() {
       ))}
       {run ? (
         <circle key={`${run}-${mode}-${test}`} className={ok ? "nm-pkt" : "nm-pkt bad"} r={6}>
-          <animateMotion dur="1.6s" fill="freeze" path={PATHS[test]} keyPoints={ok ? "0;1" : "0;0.45"} keyTimes="0;1" calcMode="linear" />
+          <animateMotion dur="1.6s" fill="freeze" path={PATHS[test]} keyPoints={ok ? "0;1" : "0;0.4"} keyTimes="0;1" calcMode="linear" />
         </circle>
       ) : null}
     </Diagram>

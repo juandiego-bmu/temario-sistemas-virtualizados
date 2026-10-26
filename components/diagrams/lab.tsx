@@ -284,63 +284,65 @@ export function TopologyLab() {
           <input type="checkbox" checked={ips} onChange={(e) => setIps(e.target.checked)} /> Configurar IPs dentro
         </label>
       </div>
-      <svg className="dg-svg" viewBox="0 0 560 150" role="img" aria-label="Diagrama de la topología elegida con Internet, las máquinas virtuales y las LANs entre ellas.">
-        <ellipse className="nm-cloud" cx={44} cy={70} rx={38} ry={24} />
-        <text className="dg-s" x={44} y={74} textAnchor="middle">
-          Internet
-        </text>
-        {topo === "chain"
-          ? vms.flatMap((v, i) => {
-              const x = 96 + 2 * i * (boxW + 8);
-              const items = [
-                <g key={`v${v}`}>
-                  <rect className="dg-node out" x={x} y={46} width={boxW} height={48} rx={8} />
-                  <text className="dg-t" x={x + boxW / 2} y={66} textAnchor="middle">
-                    vm{v}
-                  </text>
-                  <text className="dg-s" x={x + boxW / 2} y={82} textAnchor="middle">
-                    {nicsOf(v).length} NIC{nicsOf(v).length > 1 ? "s" : ""}
-                  </text>
-                  <path className="dg-wire" d={`M${x - (i ? 8 : 14)} 70 L${x} 70`} />
-                </g>,
-              ];
-              if (v < n)
-                items.push(
-                  <g key={`l${v}`}>
-                    <rect className="br-bar" x={x + boxW + 8} y={60} width={boxW} height={20} rx={10} />
-                    <text className="dg-s br-t" x={x + boxW + 8 + boxW / 2} y={74} textAnchor="middle">
-                      br{v}
-                    </text>
-                    <text className="dg-s" x={x + boxW + 8 + boxW / 2} y={100} textAnchor="middle">
-                      {ips ? `192.168.${v}.0/24` : `LAN ${v}`}
-                    </text>
-                    <path className="dg-wire" d={`M${x + boxW} 70 L${x + boxW + 8} 70`} />
-                  </g>,
-                );
-              return items;
-            })
-          : [
-              <g key="lan">
-                <rect className="br-bar" x={96} y={118} width={440} height={20} rx={10} />
-                <text className="dg-s br-t" x={316} y={132} textAnchor="middle">
-                  br1 {ips ? "· 192.168.1.0/24" : ""}
-                </text>
-                <path className="dg-wire" d="M82 70 L110 70" />
-              </g>,
-              ...vms.map((v, i) => {
-                const x = 110 + i * (boxW + 14);
-                return (
-                  <g key={v}>
-                    <rect className="dg-node out" x={x} y={40} width={boxW} height={48} rx={8} />
-                    <text className="dg-t" x={x + boxW / 2} y={68} textAnchor="middle">
+      <div className="dg-scroll">
+        <svg className="dg-svg" viewBox="0 0 560 150" role="img" aria-label="Diagrama de la topología elegida con Internet, las máquinas virtuales y las LANs entre ellas.">
+          <ellipse className="nm-cloud" cx={44} cy={70} rx={38} ry={24} />
+          <text className="dg-s" x={44} y={74} textAnchor="middle">
+            Internet
+          </text>
+          {topo === "chain"
+            ? vms.flatMap((v, i) => {
+                const x = 96 + 2 * i * (boxW + 8);
+                const items = [
+                  <g key={`v${v}`}>
+                    <rect className="dg-node out" x={x} y={46} width={boxW} height={48} rx={8} />
+                    <text className="dg-t" x={x + boxW / 2} y={66} textAnchor="middle">
                       vm{v}
                     </text>
-                    <path className="dg-wire" d={`M${x + boxW / 2} 88 L${x + boxW / 2} 118`} />
-                  </g>
-                );
-              }),
-            ]}
-      </svg>
+                    <text className="dg-s" x={x + boxW / 2} y={82} textAnchor="middle">
+                      {nicsOf(v).length} NIC{nicsOf(v).length > 1 ? "s" : ""}
+                    </text>
+                    <path className="dg-wire" d={`M${x - (i ? 8 : 14)} 70 L${x} 70`} />
+                  </g>,
+                ];
+                if (v < n)
+                  items.push(
+                    <g key={`l${v}`}>
+                      <rect className="br-bar" x={x + boxW + 8} y={60} width={boxW} height={20} rx={10} />
+                      <text className="dg-s br-t" x={x + boxW + 8 + boxW / 2} y={74} textAnchor="middle">
+                        br{v}
+                      </text>
+                      <text className="dg-s" x={x + boxW + 8 + boxW / 2} y={100} textAnchor="middle">
+                        {ips ? `192.168.${v}.0/24` : `LAN ${v}`}
+                      </text>
+                      <path className="dg-wire" d={`M${x + boxW} 70 L${x + boxW + 8} 70`} />
+                    </g>,
+                  );
+                return items;
+              })
+            : [
+                <g key="lan">
+                  <rect className="br-bar" x={96} y={118} width={440} height={20} rx={10} />
+                  <text className="dg-s br-t" x={316} y={132} textAnchor="middle">
+                    br1 {ips ? "· 192.168.1.0/24" : ""}
+                  </text>
+                  <path className="dg-wire" d="M82 70 L110 70" />
+                </g>,
+                ...vms.map((v, i) => {
+                  const x = 110 + i * (boxW + 14);
+                  return (
+                    <g key={v}>
+                      <rect className="dg-node out" x={x} y={40} width={boxW} height={48} rx={8} />
+                      <text className="dg-t" x={x + boxW / 2} y={68} textAnchor="middle">
+                        vm{v}
+                      </text>
+                      <path className="dg-wire" d={`M${x + boxW / 2} 88 L${x + boxW / 2} 118`} />
+                    </g>
+                  );
+                }),
+              ]}
+        </svg>
+      </div>
       <Cmd title={`Script: ${n} MVs en ${topo === "chain" ? "cadena" : "una LAN"}`}>{lines.join("\n")}</Cmd>
       <p className="dg-note">
         Cada NIC lleva su par <code>-netdev … id=nX</code> + <code>-device … netdev=nX</code> y una <b>MAC única</b>. La vm1 tiene además una NIC <b>user</b>: es su salida a Internet por NAT. {topo === "chain" ? "Las MVs intermedias tienen dos NICs, una en cada LAN: son los routers." : "Con una sola LAN, el bucle for basta para lanzar todas."}

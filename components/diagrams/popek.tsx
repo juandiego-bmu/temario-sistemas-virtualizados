@@ -100,7 +100,7 @@ export function PopekSetsDiagram() {
         Privilegiadas
       </text>
       <ellipse className="pg-sens" data-flash={flash === "sens" ? "" : undefined} cx={x86 ? 390 : 300} cy={184} rx={x86 ? 145 : 118} ry={x86 ? 84 : 80} />
-      <text className="dg-t pg-sens-t" x={x86 ? 459 : 300} y={x86 ? 128 : 120} textAnchor="middle">
+      <text className="dg-t pg-sens-t" x={x86 ? 470 : 300} y={x86 ? 96 : 120} textAnchor="middle">
         Sensibles
       </text>
       {x86 ? (

@@ -646,6 +646,41 @@ body.iso[data-theme="light"] [style*="--h"] {
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent), 0 30px 60px -40px var(--accent);
 }
 
+/* Long readouts wrap inside their own column instead of running into the hint. */
+.fig .iso-plate-corner[data-corner="hint"],
+.fig .iso-plate-corner[data-corner="readout"] {
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.fig .iso-plate-corner[data-corner="hint"] {
+  max-width: 34%;
+}
+
+.fig .iso-plate-corner[data-corner="readout"] {
+  max-width: 62%;
+  text-align: right;
+}
+
+/* On a phone the mode badge needs the whole top row, and the readout the whole bottom one. */
+@media (max-width: 560px) {
+  .fig .iso-plate-corner[data-corner="fig"],
+  .fig .iso-plate-corner[data-corner="title"],
+  .fig .iso-plate-corner[data-corner="hint"] {
+    display: none;
+  }
+
+  .fig .mode-badge {
+    max-width: calc(100% - 24px);
+  }
+
+  .fig .iso-plate-corner[data-corner="readout"] {
+    left: 0;
+    max-width: none;
+    text-align: left;
+  }
+}
+
 /* ---------- diagrams ---------- */
 /* Flex rather than grid: a diagram left alone on its row grows to the full width instead of leaving a hole. */
 .dg-grid {

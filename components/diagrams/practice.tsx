@@ -497,42 +497,44 @@ export function BridgeLab() {
         <span className="dg-kicker">Práctica 2 paso a paso</span>
         <strong>Bridge privado br1 con servidor DHCP</strong>
       </figcaption>
-      <svg className="dg-svg" viewBox="0 0 560 190" role="img" aria-label="Un bridge br1 al que se conectan el host, un servidor DHCP y dos clientes. El bridge no está conectado a ninguna NIC real.">
-        <rect className="nm-host" x={8} y={8} width={544} height={174} rx={14} />
-        <text className="dg-kick" x={20} y={26}>
-          Servidor KVM · el bridge no toca ninguna NIC real (red privada)
-        </text>
-        <rect className="dg-node" x={18} y={120} width={92} height={40} rx={6} />
-        <text className="dg-s" x={64} y={144} textAnchor="middle">
-          ens32 / ens33
-        </text>
-        <path className="nm-cut" d="M112 130 L126 150 M126 130 L112 150" />
-        {step >= 0 ? (
-          <g>
-            <rect className="br-bar" x={130} y={126} width={400} height={20} rx={10} />
-            <text className="dg-t br-t" x={330} y={140} textAnchor="middle">
-              br1 · host 10.0.0.1/24 {step >= 1 ? "· allow br1 ✓" : ""}
-            </text>
-          </g>
-        ) : null}
-        {vms.map((v, i) =>
-          step >= v.from ? (
-            <g key={v.name} className="br-vm">
-              <path className="dg-wire" data-flow={step === 4 && i > 0 ? "" : undefined} d={`M${190 + i * 130} 104 L${190 + i * 130} 126`} />
-              <rect className={i === 0 ? "dg-node accent" : "dg-node out"} x={128 + i * 130} y={40} width={124} height={64} rx={8} />
-              <text className={i === 0 ? "dg-t wa-on" : "dg-t"} x={190 + i * 130} y={60} textAnchor="middle">
-                {v.name}
-              </text>
-              <text className={i === 0 ? "dg-s wa-on" : "dg-s"} x={190 + i * 130} y={77} textAnchor="middle">
-                {v.ip}
-              </text>
-              <text className={i === 0 ? "dg-s wa-on" : "dg-s"} x={190 + i * 130} y={93} textAnchor="middle">
-                MAC {v.mac}
+      <div className="dg-scroll">
+        <svg className="dg-svg" viewBox="0 0 560 190" role="img" aria-label="Un bridge br1 al que se conectan el host, un servidor DHCP y dos clientes. El bridge no está conectado a ninguna NIC real.">
+          <rect className="nm-host" x={8} y={8} width={544} height={174} rx={14} />
+          <text className="dg-kick" x={20} y={26}>
+            Servidor KVM · el bridge no toca ninguna NIC real (red privada)
+          </text>
+          <rect className="dg-node" x={18} y={120} width={92} height={40} rx={6} />
+          <text className="dg-s" x={64} y={144} textAnchor="middle">
+            ens32 / ens33
+          </text>
+          <path className="nm-cut" d="M112 130 L126 150 M126 130 L112 150" />
+          {step >= 0 ? (
+            <g>
+              <rect className="br-bar" x={130} y={126} width={400} height={20} rx={10} />
+              <text className="dg-t br-t" x={330} y={140} textAnchor="middle">
+                br1 · host 10.0.0.1/24 {step >= 1 ? "· allow br1 ✓" : ""}
               </text>
             </g>
-          ) : null,
-        )}
-      </svg>
+          ) : null}
+          {vms.map((v, i) =>
+            step >= v.from ? (
+              <g key={v.name} className="br-vm">
+                <path className="dg-wire" data-flow={step === 4 && i > 0 ? "" : undefined} d={`M${190 + i * 130} 104 L${190 + i * 130} 126`} />
+                <rect className={i === 0 ? "dg-node accent" : "dg-node out"} x={128 + i * 130} y={40} width={124} height={64} rx={8} />
+                <text className={i === 0 ? "dg-t wa-on" : "dg-t"} x={190 + i * 130} y={60} textAnchor="middle">
+                  {v.name}
+                </text>
+                <text className={i === 0 ? "dg-s wa-on" : "dg-s"} x={190 + i * 130} y={77} textAnchor="middle">
+                  {v.ip}
+                </text>
+                <text className={i === 0 ? "dg-s wa-on" : "dg-s"} x={190 + i * 130} y={93} textAnchor="middle">
+                  MAC {v.mac}
+                </text>
+              </g>
+            ) : null,
+          )}
+        </svg>
+      </div>
       <Steps step={step} total={BR_STEPS.length} playing={playing} onPlay={play} onStep={go} labels={BR_STEPS.map((x, i) => `${i + 1}/${BR_STEPS.length} · ${x.t}`)} />
       <Cmd>{s.cmd}</Cmd>
     </figure>
@@ -546,7 +548,7 @@ const BOOT: [number, string][] = [
   [0, "SeaBIOS (version 1.16)"],
   [350, "Booting from Hard Disk..."],
   [750, "OpenRC is starting up Linux (x86_64)"],
-  [1100, " * Starting sshd ...                  [ ok ]"],
+  [1100, " * Starting sshd ...          [ ok ]"],
   [1450, ""],
   [1500, "alpine-base login:"],
 ];
@@ -565,9 +567,9 @@ const POWER = [
     lines: [
       [0, "(ACPI) power button pressed"],
       [400, "The system is going down NOW!"],
-      [800, " * Stopping sshd ...                  [ ok ]"],
+      [800, " * Stopping sshd ...          [ ok ]"],
       [1200, "Sent SIGTERM to all processes"],
-      [1600, " * Unmounting filesystems ...         [ ok ]"],
+      [1600, " * Unmounting filesystems ... [ ok ]"],
       [2000, "reboot: Power down"],
     ] as [number, string][],
     end: false,
@@ -582,8 +584,8 @@ const POWER = [
     guest: "reboot",
     lines: [
       [0, "The system is going down NOW!"],
-      [400, " * Stopping sshd ...                  [ ok ]"],
-      [800, " * Unmounting filesystems ...         [ ok ]"],
+      [400, " * Stopping sshd ...          [ ok ]"],
+      [800, " * Unmounting filesystems ... [ ok ]"],
       [1200, "reboot: Restarting system"],
       ...BOOT.map(([t, l]) => [t + 1600, l] as [number, string]),
     ] as [number, string][],

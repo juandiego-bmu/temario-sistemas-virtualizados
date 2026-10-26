@@ -60,9 +60,11 @@ export function Diagram({
         <span className="dg-kicker">{kicker}</span>
         <strong>{title}</strong>
       </figcaption>
-      <svg className="dg-svg" viewBox={viewBox} role="img" aria-label={label}>
-        {mounted ? children : null}
-      </svg>
+      <div className="dg-scroll">
+        <svg className="dg-svg" viewBox={viewBox} role="img" aria-label={label}>
+          {mounted ? children : null}
+        </svg>
+      </div>
       {controls ? <div className="controls">{controls}</div> : null}
       {note ? <div className="dg-note">{note}</div> : null}
     </figure>

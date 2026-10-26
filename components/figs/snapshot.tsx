@@ -91,10 +91,16 @@ export function SnapshotFigure() {
   const timers = React.useRef<number[]>([]);
   React.useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
   const later = (ms: number, f: () => void) => timers.current.push(window.setTimeout(f, ms));
+  // Any new action cancels a read that is still walking the chain, so it cannot overwrite the new state.
+  const stop = () => {
+    timers.current.forEach(window.clearTimeout);
+    timers.current = [];
+  };
   const live = layers[layers.length - 1];
   const xOf = (i: number) => X0 + i * STEP;
 
   const write = (b: number) => {
+    stop();
     setLayers((ls) => ls.map((l, i) => (i === ls.length - 1 && !l.blocks.includes(b) ? { ...l, blocks: [...l.blocks, b] } : l)));
     setHot({ id: live.id, b: [b] });
     setProbe(null);
@@ -102,8 +108,7 @@ export function SnapshotFigure() {
     setCmd("# la MV escribe: el hipervisor lo guarda en el delta (copy-on-write)");
   };
   const read = (b: number) => {
-    timers.current.forEach(window.clearTimeout);
-    timers.current = [];
+    stop();
     setHot(null);
     let checks = 0;
     for (let i = layers.length - 1; i >= 0; i--) {
@@ -123,6 +128,7 @@ export function SnapshotFigure() {
     setCmd("# lectura: primero el delta actual; si no está, el volumen anterior");
   };
   const snapshot = () => {
+    stop();
     if (layers.length >= 5) return setSay("Máximo de snapshots en esta figura: elimina o revierte alguno");
     const name = `snap${snapN}`;
     setLayers((ls) => [...ls.slice(0, -1), { ...ls[ls.length - 1], name: `Δ${ls.length - 1}`, snap: name }, { id: next, name: "Δ actual", snap: null, blocks: [] }]);
@@ -134,6 +140,7 @@ export function SnapshotFigure() {
     setCmd(`qemu-img snapshot -c ${name} disco.qcow2`);
   };
   const revert = (i: number) => {
+    stop();
     const target = layers[i];
     setLayers((ls) => [...ls.slice(0, i + 1), { id: next, name: "Δ actual", snap: null, blocks: [] }]);
     setNext((n) => n + 1);
@@ -143,6 +150,7 @@ export function SnapshotFigure() {
     setCmd(`qemu-img snapshot -a ${target.snap} disco.qcow2`);
   };
   const remove = (i: number) => {
+    stop();
     const gone = layers[i];
     const child = layers[i + 1];
     const moved = gone.blocks.filter((b) => !child.blocks.includes(b));
@@ -153,6 +161,7 @@ export function SnapshotFigure() {
     setCmd(`qemu-img snapshot -d ${gone.snap} disco.qcow2`);
   };
   const deleteAll = () => {
+    stop();
     const all = Array.from(new Set(layers.flatMap((l) => l.blocks)));
     setLayers([{ id: next, name: "BASE (sin snapshots)", snap: null, blocks: all }]);
     setNext((n) => n + 1);
@@ -162,7 +171,7 @@ export function SnapshotFigure() {
     setCmd("qemu-img commit actual.qcow2   # vuelca un overlay en su base");
   };
   const reset = () => {
-    timers.current.forEach(window.clearTimeout);
+    stop();
     setLayers(fresh());
     setNext(3);
     setSnapN(2);
