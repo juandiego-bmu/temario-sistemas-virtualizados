@@ -13,6 +13,7 @@ export const TOPICS = [
 
 // Review tools after the syllabus.
 export const REVIEW = [
+  { id: "sim", n: "3D", title: "Laboratorio 3D", tag: "simulador de P1 y P2", hue: 190, kind: "Práctica" },
   { id: "test", n: "?", title: "Test de examen", tag: "banco de preguntas", hue: 280, kind: "Repaso" },
   { id: "chuleta", n: "✓", title: "Chuleta del laboratorio", tag: "comandos y trampas", hue: 160, kind: "Repaso" },
 ] as const;

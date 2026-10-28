@@ -9,6 +9,7 @@ import { HostedNetModes, VlanDiagram } from "@/components/diagrams/network";
 import { PopekSetsDiagram, VcpuMatrix } from "@/components/diagrams/popek";
 import { CommandAnatomy, PowerSim, SlirpDiagram } from "@/components/diagrams/practice";
 import { DatastoreFigure } from "@/components/figs/datastore";
+import { LabSim } from "@/components/sim/LabSim";
 import { SnapshotFigure } from "@/components/figs/snapshot";
 import { StackFigure } from "@/components/figs/stack";
 import { Hero3D } from "@/components/hero3d";
@@ -526,6 +527,10 @@ export default function Page() {
             <code>nmcli connection delete bridge1</code>, <code>nmcli device delete br1</code> y cierra los puertos con <code>firewall-cmd --remove-port</code>.
           </T>
         </Topic>
+
+        <Review id="sim" lead="Las prácticas como un videojuego: escribe los comandos de verdad y mira en 3D lo que hacen. Entras por la VPN y SSH al servidor, creas los discos, arrancas máquinas dentro de él y las conectas en red. Pulsa cualquier pieza para ver qué es.">
+          <LabSim />
+        </Review>
 
         <Divider h={280} kicker="Repaso" title="Ponte a prueba" meta="test tipo examen y chuleta para el laboratorio" />
 
