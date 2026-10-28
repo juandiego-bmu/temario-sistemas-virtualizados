@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Choice } from "../figs/common";
-import { Diagram, MiniQuiz, useShow } from "./kit";
+import { Diagram, useShow } from "./kit";
 
 type Kind = "inocua" | "priv" | "sens" | "sens-np";
 
@@ -220,72 +220,5 @@ export function VcpuMatrix() {
         Ejemplo: {example}
       </div>
     </figure>
-  );
-}
-
-const TAXO = [
-  { id: "full", title: "Kind I · Full machine", sub: "guest sin modificar", text: "Se virtualiza la máquina entera y el SO guest no sabe que está virtualizado. Dentro están los hipervisores tipo 1 (native, bare metal) y tipo 2 (hosted)." },
-  { id: "para", title: "Kind II · Paravirtualización", sub: "guest modificado", text: "El hipervisor no emula con precisión otra máquina: el kernel del guest se modifica para usar hypercalls en lugar de las instrucciones no virtualizables (y para memoria, interrupciones, reloj…)." },
-  { id: "other", title: "Kind III · Otros", sub: "JVM · contenedores", text: "Runtimes de lenguajes (la máquina virtual de Java) y contenedores, que no son máquinas virtuales sino virtualización a nivel de sistema operativo (se verán en el segundo parcial)." },
-] as const;
-
-/** Kind I / II / III with the two hypervisor types under Kind I. */
-export function TaxonomyDiagram() {
-  const [on, setOn] = React.useState<(typeof TAXO)[number]["id"]>("full");
-  useShow("taxo", (key) => TAXO.some((x) => x.id === key) && setOn(key as (typeof TAXO)[number]["id"]));
-  const t = TAXO.find((x) => x.id === on)!;
-  return (
-    <Diagram ns="taxo" title="Taxonomía de la virtualización" kicker="Clasificación" label="Árbol: virtualización se divide en full machine (tipo 1 y tipo 2), paravirtualización y otros (JVM, contenedores)." viewBox="0 0 560 210" note={<><b>{t.title}:</b> {t.text}</>}>
-      <rect className="dg-node accent" x={200} y={10} width={160} height={36} rx={18} />
-      <text className="dg-t tx-root" x={280} y={33} textAnchor="middle">
-        Virtualización
-      </text>
-      {TAXO.map((x, i) => {
-        const cx = 95 + i * 185;
-        return (
-          <g key={x.id} className="tx-node" data-on={x.id === on ? "" : undefined} role="button" tabIndex={0} onClick={() => setOn(x.id)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setOn(x.id)}>
-            <path className="dg-wire" d={`M280 46 C280 70 ${cx} 62 ${cx} 82`} />
-            <rect x={cx - 85} y={82} width={170} height={46} rx={10} />
-            <text className="dg-t" x={cx} y={102} textAnchor="middle">
-              {x.title}
-            </text>
-            <text className="dg-s" x={cx} y={119} textAnchor="middle">
-              {x.sub}
-            </text>
-          </g>
-        );
-      })}
-      {[
-        ["Tipo 1 · native", "ESXi · Xen · Hyper-V"],
-        ["Tipo 2 · hosted", "VirtualBox · QEMU/KVM"],
-      ].map(([a, b], i) => (
-        <g key={a}>
-          <path className="dg-wire" d={`M95 128 C95 146 ${66 + i * 140} 140 ${66 + i * 140} 156`} />
-          <rect className="dg-node" x={i * 140} y={156} width={132} height={44} rx={8} />
-          <text className="dg-t tx-small" x={66 + i * 140} y={174} textAnchor="middle">
-            {a}
-          </text>
-          <text className="dg-s tx-small" x={66 + i * 140} y={190} textAnchor="middle">
-            {b}
-          </text>
-        </g>
-      ))}
-    </Diagram>
-  );
-}
-
-export function TypesQuiz() {
-  return (
-    <MiniQuiz
-      title="¿Tipo 1, tipo 2 o tipo 1 con Dom0?"
-      questions={[
-        { q: "VMware ESXi", options: ["Tipo 1 (native / bare metal)", "Tipo 2 (hosted)", "Tipo 1 con Dom0"], ok: 0, why: "Es un kernel propio que arranca sobre el hardware y usa sus propios drivers." },
-        { q: "VirtualBox", options: ["Tipo 1", "Tipo 2 (hosted)", "Tipo 1 con Dom0"], ok: 1, why: "Es una aplicación más del SO host (Windows, Linux, macOS)." },
-        { q: "Xen", options: ["Tipo 2", "Tipo 1 con Dom0", "Contenedor"], ok: 1, why: "La E/S la hace una MV privilegiada (Dom0) con un Linux y sus drivers." },
-        { q: "Microsoft Hyper-V", options: ["Tipo 1 con partición padre (Dom0)", "Tipo 2", "Emulador"], ok: 0, why: "Igual que Xen: la partición padre tiene los drivers y las interfaces de gestión." },
-        { q: "QEMU/KVM (según la asignatura)", options: ["Tipo 1", "Tipo 2 (hosted)", "Paravirtualización pura"], ok: 1, why: "QEMU es un proceso del Linux host y KVM el módulo del kernel que intercepta las instrucciones privilegiadas." },
-        { q: "En un hipervisor tipo 2, ¿quién hace la E/S real con el disco físico?", options: ["Los drivers del hipervisor", "Los drivers del SO host", "El Dom0"], ok: 1, why: "El hipervisor emula el dispositivo y usa los servicios del SO real (el disco virtual es un fichero del host)." },
-      ]}
-    />
   );
 }

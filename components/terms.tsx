@@ -101,12 +101,15 @@ const hiddenProps = (hidden: boolean, reveal: () => void, k: string) =>
       }
     : {};
 
-/** One term card. `show` adds buttons that put the section's figure in the state this term describes. */
-export function T({ k, children, show }: { k: string; children: React.ReactNode; show?: [string, string][] }) {
+/** One term card. `show` adds buttons that put the section's figure in the state this term describes; `hot` flags what the exam asks. */
+export function T({ k, children, show, hot }: { k: string; children: React.ReactNode; show?: [string, string][]; hot?: boolean }) {
   const { hidden, reveal } = useTerm(k);
   return (
-    <div className="term reveal" data-hidden={hidden ? "" : undefined} {...hiddenProps(hidden, reveal, k)}>
-      <dt>{k}</dt>
+    <div className="term reveal" data-hidden={hidden ? "" : undefined} data-hot={hot ? "" : undefined} {...hiddenProps(hidden, reveal, k)}>
+      <dt>
+        {k}
+        {hot ? <span className="term-hot">★ examen</span> : null}
+      </dt>
       <dd aria-hidden={hidden || undefined}>{children}</dd>
       {hidden ? <span className="term-peek">¿Lo recuerdas? Pulsa para comprobarlo</span> : <ShowButtons show={show} />}
     </div>

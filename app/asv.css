@@ -61,11 +61,6 @@ body.iso {
   color: var(--anatomy-text);
 }
 
-.btn.good {
-  background: color-mix(in oklab, var(--anatomy-green) 22%, var(--anatomy-card));
-  box-shadow: 0 0 0 1px var(--anatomy-green);
-}
-
 .btn.bad {
   background: color-mix(in oklab, var(--anatomy-red) 20%, var(--anatomy-card));
   box-shadow: 0 0 0 1px var(--anatomy-red);
@@ -280,26 +275,6 @@ body.iso {
   fill: var(--accent);
 }
 
-.dg-node.kern {
-  fill: color-mix(in oklab, var(--anatomy-blue) 25%, var(--anatomy-card));
-  stroke: var(--anatomy-blue);
-}
-
-.dg-node.kern.hv {
-  fill: color-mix(in oklab, var(--accent) 28%, var(--anatomy-card));
-  stroke: var(--accent);
-}
-
-.dg-node.hvc {
-  fill: color-mix(in oklab, var(--accent) 16%, var(--anatomy-card));
-  stroke: var(--accent);
-}
-
-.dg-node.osc {
-  fill: color-mix(in oklab, var(--anatomy-blue) 14%, var(--anatomy-card));
-  stroke: var(--anatomy-blue);
-}
-
 .dg-node.hw {
   fill: color-mix(in oklab, var(--anatomy-green) 16%, var(--anatomy-card));
   stroke: var(--anatomy-green);
@@ -483,34 +458,6 @@ body.iso {
 }
 
 /* taxonomy */
-.tx-node {
-  cursor: pointer;
-}
-
-.tx-node rect {
-  fill: var(--anatomy-face);
-  stroke: var(--anatomy-mid);
-  stroke-width: 1.2;
-  transition: fill 0.3s, stroke 0.3s;
-}
-
-.tx-node[data-on] rect {
-  fill: color-mix(in oklab, var(--accent) 30%, var(--anatomy-card));
-  stroke: var(--accent);
-  stroke-width: 2;
-}
-
-.tx-node:focus-visible {
-  outline: none;
-}
-
-.tx-root {
-  fill: var(--anatomy-page) !important;
-}
-
-.tx-small {
-  font-size: 9.5px !important;
-}
 
 /* iso stack */
 .stk-bay {
@@ -558,147 +505,6 @@ body.iso {
 /* ======================================================================
    Part II diagrams
    ====================================================================== */
-.emu-grid,
-.bt-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: 16px;
-  margin-top: 12px;
-}
-
-.bt-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-}
-
-.emu-h {
-  display: block;
-  margin: 0 0 6px;
-  font: 600 11px var(--anatomy-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.emu-mem,
-.bt-list {
-  display: grid;
-  gap: 3px;
-  margin: 0 0 14px;
-  padding: 0;
-  list-style: none;
-  font: 12.5px var(--anatomy-mono);
-}
-
-.emu-mem li,
-.bt-list li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 9px;
-  border-radius: 7px;
-  background: var(--anatomy-face);
-  box-shadow: 0 0 0 1px var(--line);
-  color: var(--anatomy-strong);
-  transition: background 0.3s, box-shadow 0.3s;
-}
-
-.emu-mem li code {
-  color: var(--anatomy-muted);
-}
-
-.emu-mem li[data-k] {
-  border-left: 3px solid color-mix(in oklab, var(--anatomy-red) 60%, transparent);
-}
-
-.emu-mem li[data-on],
-.bt-list li[data-on] {
-  background: color-mix(in oklab, var(--accent) 30%, var(--anatomy-card));
-  box-shadow: 0 0 0 1.5px var(--accent);
-}
-
-.emu-state {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 12px;
-  margin: 0;
-  font: 12.5px var(--anatomy-mono);
-}
-
-.emu-state dt {
-  color: var(--anatomy-muted);
-}
-
-.emu-state dd {
-  margin: 0;
-  color: var(--anatomy-strong);
-}
-
-.emu-state dd[data-mode="KERNEL"] {
-  color: var(--anatomy-red);
-  font-weight: 700;
-}
-
-.emu-state dd[data-mode="USER"] {
-  color: var(--anatomy-green);
-  font-weight: 700;
-}
-
-.emu-code {
-  margin: 0;
-  padding: 12px;
-  overflow-x: auto;
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--anatomy-page) 70%, var(--anatomy-card));
-  box-shadow: 0 0 0 1px var(--line);
-  font: 12px/1.6 var(--anatomy-mono);
-  color: var(--anatomy-text);
-}
-
-.emu-code span {
-  display: block;
-  padding: 0 6px;
-  border-radius: 4px;
-  white-space: pre;
-  transition: background 0.3s, color 0.3s;
-}
-
-.emu-code span[data-on] {
-  background: color-mix(in oklab, var(--accent) 28%, transparent);
-  color: var(--anatomy-strong);
-}
-
-.emu-code span[data-bad] {
-  background: color-mix(in oklab, var(--anatomy-red) 30%, transparent);
-}
-
-.bt-kind {
-  margin-left: auto;
-  padding: 0 7px;
-  border-radius: 999px;
-  font-size: 10.5px;
-  box-shadow: 0 0 0 1px var(--line);
-  color: var(--anatomy-text);
-}
-
-.bt-kind[data-kind="IDENT"] {
-  color: var(--anatomy-green);
-  box-shadow: 0 0 0 1px var(--anatomy-green);
-}
-
-.bt-kind[data-kind="INLINE"] {
-  color: var(--anatomy-blue);
-  box-shadow: 0 0 0 1px var(--anatomy-blue);
-}
-
-.bt-kind[data-kind*="CALLOUT"] {
-  color: var(--anatomy-red);
-  box-shadow: 0 0 0 1px var(--anatomy-red);
-}
-
-.bt-list.tc li {
-  border-left: 3px solid var(--accent);
-}
 
 /* trap timeline */
 .tt-lane rect {
@@ -715,79 +521,8 @@ body.iso {
 }
 
 /* hybrid */
-.hy-dec {
-  fill: color-mix(in oklab, var(--accent) 20%, var(--anatomy-card));
-  stroke: var(--accent);
-  stroke-width: 1.5;
-}
-
-.hy-path path {
-  fill: none;
-  stroke: var(--anatomy-mid);
-  stroke-width: 1.6;
-}
-
-.hy-path rect {
-  fill: var(--anatomy-face);
-  stroke: var(--anatomy-mid);
-}
-
-.hy-path.lit path {
-  stroke: var(--accent);
-  stroke-width: 2.4;
-  stroke-dasharray: 6 5;
-  animation: iso-flow 1.2s linear infinite;
-}
-
-.hy-path.lit rect {
-  fill: color-mix(in oklab, var(--accent) 26%, var(--anatomy-card));
-  stroke: var(--accent);
-}
-
-.hy-path.dim {
-  opacity: 0.35;
-}
 
 /* scheduler */
-.sch-row {
-  fill: var(--anatomy-face);
-  stroke: var(--line);
-}
-
-.sch-run {
-  fill: var(--anatomy-mid);
-}
-
-.sch-run[data-vm="0"] {
-  fill: var(--accent);
-}
-
-.sch-run[data-vm="1"] {
-  fill: var(--anatomy-blue);
-}
-
-.sch-run[data-vm="2"] {
-  fill: var(--anatomy-green);
-}
-
-.sch-run[data-vm="idle"] {
-  fill: var(--anatomy-face);
-  stroke: var(--line);
-  stroke-dasharray: 2 2;
-}
-
-.sch-halt,
-.sch-to {
-  font: 700 8.5px var(--anatomy-mono);
-}
-
-.sch-halt {
-  fill: var(--anatomy-green) !important;
-}
-
-.sch-to {
-  fill: var(--anatomy-red) !important;
-}
 
 /* paging calculator */
 .pc-page {
@@ -815,44 +550,6 @@ body.iso {
 }
 
 /* translation flow */
-.tf-split {
-  stroke: var(--line);
-  stroke-dasharray: 5 5;
-}
-
-.tf-node rect {
-  fill: var(--anatomy-face);
-  stroke: var(--anatomy-mid);
-  transition: fill 0.3s, stroke 0.3s;
-}
-
-.tf-node {
-  opacity: 0.45;
-  transition: opacity 0.3s;
-}
-
-.tf-node[data-on] {
-  opacity: 1;
-}
-
-.tf-node[data-on] rect {
-  fill: color-mix(in oklab, var(--accent) 24%, var(--anatomy-card));
-  stroke: var(--accent);
-}
-
-.tf-node[data-on][data-kind="bad"] rect {
-  fill: color-mix(in oklab, var(--anatomy-red) 25%, var(--anatomy-card));
-  stroke: var(--anatomy-red);
-}
-
-.tf-node[data-on][data-kind="end"] rect {
-  fill: color-mix(in oklab, var(--anatomy-green) 22%, var(--anatomy-card));
-  stroke: var(--anatomy-green);
-}
-
-.tf-node .dg-t {
-  font-size: 11px;
-}
 
 .dg-node[data-cow] {
   stroke: var(--accent);
@@ -941,121 +638,10 @@ body.iso {
 }
 
 /* shadow vs nested */
-.svn-events {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0 14px;
-}
-
-.svn-cols {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.svn-col {
-  padding: 14px;
-  border-radius: 12px;
-  background: var(--anatomy-face);
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.svn-col[data-k="sh"] {
-  box-shadow: inset 4px 0 0 var(--anatomy-red), 0 0 0 1px var(--line);
-}
-
-.svn-col[data-k="ne"] {
-  box-shadow: inset 4px 0 0 var(--anatomy-blue), 0 0 0 1px var(--line);
-}
-
-.svn-col h4 {
-  margin: 0 0 8px;
-  color: var(--anatomy-strong);
-  font-family: var(--font-display), sans-serif;
-}
-
-.svn-col p {
-  margin: 8px 0 0;
-  font-size: 14px;
-}
-
-.svn-num {
-  display: grid;
-  gap: 2px;
-  font-size: 14px;
-}
-
-.svn-num b {
-  font: 700 26px var(--font-display), sans-serif;
-  color: var(--anatomy-strong);
-}
 
 /* balloon */
-.bl-cap {
-  fill: var(--anatomy-face);
-  stroke: var(--line);
-}
-
-.bl-active {
-  fill: var(--accent);
-}
-
-.bl-cache {
-  fill: color-mix(in oklab, var(--accent) 35%, var(--anatomy-card));
-}
-
-.bl-balloon {
-  fill: color-mix(in oklab, var(--anatomy-blue) 55%, var(--anatomy-card));
-  stroke: var(--anatomy-blue);
-}
-
-.bl-swap {
-  fill: transparent;
-  stroke: var(--anatomy-red);
-  stroke-dasharray: 4 3;
-}
-
-.bl-hv {
-  fill: var(--anatomy-mid);
-}
-
-.bl-vm[data-vm="0"] {
-  fill: color-mix(in oklab, var(--accent) 75%, var(--anatomy-card));
-}
-
-.bl-vm[data-vm="1"] {
-  fill: color-mix(in oklab, var(--accent) 50%, var(--anatomy-card));
-}
-
-.bl-vm[data-vm="2"] {
-  fill: color-mix(in oklab, var(--accent) 30%, var(--anatomy-card));
-}
-
-.bl-active,
-.bl-cache,
-.bl-balloon,
-.bl-swap,
-.bl-vm {
-  transition: x 0.4s var(--anatomy-ease), width 0.4s var(--anatomy-ease);
-}
 
 /* disks */
-.pv-on {
-  stroke: var(--accent);
-  stroke-width: 3;
-}
-
-.pv-off {
-  stroke: var(--anatomy-lo);
-  stroke-width: 1.4;
-}
-
-.pv-data {
-  stroke: var(--anatomy-mid);
-  stroke-dasharray: 3 4;
-  stroke-width: 1.2;
-}
 
 .fi-wrap {
   display: grid;
@@ -1208,20 +794,6 @@ body.iso {
 }
 
 /* snapshots */
-.vo-curve {
-  stroke: var(--accent);
-  stroke-width: 3;
-}
-
-.fz-cut {
-  stroke: var(--accent);
-  stroke-width: 2.5;
-  stroke-dasharray: 5 4;
-}
-
-.fz-cut.frozen {
-  stroke: var(--anatomy-green);
-}
 
 .snap-ctl {
   display: grid;
@@ -1376,108 +948,6 @@ body.iso {
 /* ======================================================================
    Part III
    ====================================================================== */
-.wa-on {
-  fill: var(--anatomy-page) !important;
-}
-
-.qil-ops {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0 14px;
-}
-
-.qil-op {
-  max-width: 100%;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: color-mix(in oklab, var(--accent) 12%, var(--anatomy-card));
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 60%, var(--line));
-  color: var(--anatomy-strong);
-  text-align: left;
-  cursor: pointer;
-}
-
-.qil-op code {
-  font: 11.5px var(--anatomy-mono);
-  white-space: normal;
-  word-break: break-word;
-}
-
-.qil-op:disabled {
-  opacity: 0.32;
-  cursor: default;
-}
-
-.qil-op[data-done] {
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
-.qil-dirs {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: 12px;
-}
-
-.qil-dir {
-  min-height: 110px;
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--anatomy-face);
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.qil-empty {
-  margin: 0;
-  color: var(--anatomy-muted);
-  font-size: 13px;
-}
-
-.qil-file {
-  display: grid;
-  gap: 2px;
-  margin-top: 6px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--anatomy-card);
-  box-shadow: inset 3px 0 0 var(--anatomy-mid);
-  font-size: 13px;
-  animation: tb-in 0.4s var(--anatomy-ease);
-}
-
-.qil-file strong {
-  font: 600 12.5px var(--anatomy-mono);
-  color: var(--anatomy-strong);
-}
-
-.qil-file[data-kind="base"] {
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.qil-file[data-kind="clone"] {
-  box-shadow: inset 3px 0 0 var(--anatomy-blue);
-}
-
-.qil-file[data-kind="full"] {
-  box-shadow: inset 3px 0 0 var(--anatomy-green);
-}
-
-.qil-file[data-broken] {
-  box-shadow: inset 3px 0 0 var(--anatomy-red), 0 0 0 1px var(--anatomy-red);
-}
-
-.qil-out {
-  margin: 12px 0 0;
-  padding: 12px 14px;
-  overflow-x: auto;
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--anatomy-page) 70%, var(--anatomy-card));
-  box-shadow: 0 0 0 1px var(--line);
-  font: 12px/1.55 var(--anatomy-mono);
-  color: var(--anatomy-strong);
-  white-space: pre-wrap;
-}
 
 .ca-cmd {
   display: flex;
@@ -1530,10 +1000,6 @@ body.iso {
   font-weight: 700;
 }
 
-.br-vm {
-  animation: tb-in 0.5s var(--anatomy-ease);
-}
-
 .pw-table {
   width: 100%;
   border-collapse: collapse;
@@ -1563,64 +1029,6 @@ body.iso {
 }
 
 /* builder */
-.qb-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.qb-form fieldset {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  min-width: 0;
-  margin: 0;
-  padding: 12px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--anatomy-face);
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.qb-form fieldset:last-child {
-  grid-column: 1 / -1;
-}
-
-.qb-form legend {
-  float: left;
-  margin-bottom: 4px;
-  font: 700 12px var(--anatomy-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.qb-form label {
-  display: grid;
-  gap: 3px;
-  font-size: 12.5px;
-  color: var(--anatomy-text);
-}
-
-.qb-form input,
-.qb-form select,
-.fc-sel select {
-  min-width: 0;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: 7px;
-  background: var(--anatomy-card);
-  box-shadow: 0 0 0 1px var(--line);
-  color: var(--anatomy-strong);
-  font: 13px var(--anatomy-mono);
-}
-
-.qb-form input:focus-visible,
-.qb-form select:focus-visible,
-.fc-sel select:focus-visible {
-  outline: 2px solid var(--accent);
-}
 
 .qb-check {
   display: flex !important;
@@ -1635,37 +1043,6 @@ body.iso {
   box-shadow: none !important;
 }
 
-.qb-nic {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 4px;
-  align-items: center;
-}
-
-.qb-nic-n {
-  font: 700 12px var(--anatomy-mono);
-  color: var(--anatomy-strong);
-}
-
-.qb-nic select,
-.qb-nic input {
-  padding: 5px 4px;
-  font-size: 11.5px;
-}
-
-.qb-nic .btn {
-  padding: 4px 8px;
-}
-
-.qb-warn {
-  margin: 12px 0 0;
-  padding: 10px 14px 10px 28px;
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--anatomy-red) 12%, var(--anatomy-card));
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--anatomy-red) 55%, transparent);
-  font-size: 14px;
-}
-
 /* challenges */
 .ch {
   padding: 18px;
@@ -1674,75 +1051,9 @@ body.iso {
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 45%, var(--line));
 }
 
-.ch-list {
-  display: grid;
-  gap: 10px;
-  margin: 8px 0 0;
-  padding-left: 22px;
-}
-
-.ch-item {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--anatomy-face);
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.ch-item[data-done] {
-  box-shadow: inset 3px 0 0 var(--anatomy-green), 0 0 0 1px var(--line);
-}
-
-.ch-item[data-done] .ch-head span {
-  color: var(--anatomy-muted);
-  text-decoration: line-through;
-}
-
-.ch-head {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  color: var(--anatomy-strong);
-  cursor: pointer;
-}
-
-.ch-head input {
-  margin-top: 5px;
-  accent-color: var(--anatomy-green);
-}
-
-.ch-item details {
-  margin-top: 6px;
-  font-size: 14px;
-}
-
-.ch-item summary {
-  cursor: pointer;
-  color: var(--accent);
-  font: 600 12px var(--anatomy-mono);
-}
-
-.ch-item details p {
-  margin: 6px 0 0;
-}
-
-.fe-code {
-  display: block;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: color-mix(in oklab, var(--anatomy-page) 70%, var(--anatomy-card));
-  box-shadow: 0 0 0 1px var(--line);
-  font: 12.5px var(--anatomy-mono);
-  color: var(--anatomy-strong);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 /* ======================================================================
    Extras: compare tabs, test bank, flashcards, cheat sheet
    ====================================================================== */
-.cmp-tabs {
-  gap: 6px;
-}
 
 .tb,
 .fc {
@@ -1871,95 +1182,6 @@ body.iso {
   color: var(--accent);
 }
 
-.fc-sel select {
-  width: min(320px, 62vw);
-}
-
-.fc-sel {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font: 12px var(--anatomy-mono);
-  color: var(--anatomy-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.fc-card {
-  display: block;
-  width: 100%;
-  max-width: 620px;
-  height: 260px;
-  margin: 16px auto 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  perspective: 1200px;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-}
-
-.fc-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 6px;
-  border-radius: 20px;
-}
-
-.fc-inner {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transition: transform 0.7s var(--anatomy-ease);
-}
-
-.fc-card[data-flip] .fc-inner {
-  transform: rotateY(180deg);
-}
-
-.fc-face {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 12px;
-  padding: 24px;
-  border-radius: 20px;
-  backface-visibility: hidden;
-  text-align: center;
-  background: radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var(--accent) 28%, transparent), transparent 60%), var(--anatomy-face);
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 55%, var(--line)), 0 24px 50px -30px var(--accent);
-}
-
-.fc-back {
-  transform: rotateY(180deg);
-  background: radial-gradient(120% 120% at 100% 100%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 60%), var(--anatomy-face);
-}
-
-.fc-topic {
-  font: 600 11px var(--anatomy-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.fc-text {
-  color: var(--anatomy-strong);
-  font: 700 clamp(22px, 4vw, 32px) / 1.15 var(--font-display), sans-serif;
-}
-
-.fc-text.small {
-  font: 500 17px/1.5 var(--font-sans), sans-serif;
-}
-
-.fc-hint {
-  font: 11px var(--anatomy-mono);
-  color: var(--anatomy-muted);
-}
-
 .cheat {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
@@ -1997,9 +1219,7 @@ body.iso {
   .snap-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
-  .qb-nic {
-    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr);
-  }
+  
   .hero-chips {
     margin-top: -32px;
   }
@@ -2021,10 +1241,6 @@ body.iso {
   align-items: center;
   gap: 8px;
   font: 12px var(--anatomy-mono);
-}
-
-.cmp .terms-bar {
-  margin-bottom: -14px;
 }
 
 .terms-mode {
@@ -2281,35 +1497,6 @@ body.iso {
 /* ======================================================================
    Translation flow, three spaces, nested walk
    ====================================================================== */
-.tf-edge {
-  fill: none;
-  stroke: var(--anatomy-lo);
-  stroke-width: 1.4;
-}
-
-.tf-e[data-on] .tf-edge {
-  stroke: var(--accent);
-  stroke-width: 2.2;
-  stroke-dasharray: 6 4;
-  animation: iso-flow 1.4s linear infinite;
-}
-
-.tf-head {
-  fill: var(--anatomy-lo);
-}
-
-.tf-head.on {
-  fill: var(--accent);
-}
-
-.tf-lbl {
-  font: 700 10px var(--anatomy-mono);
-  fill: var(--anatomy-muted) !important;
-}
-
-.tf-e[data-on] .tf-lbl {
-  fill: var(--accent) !important;
-}
 
 .ts-k {
   font: 700 15px var(--font-display), sans-serif;
@@ -2425,24 +1612,6 @@ body.iso {
 /* ======================================================================
    Comparison tables: cover the cells
    ====================================================================== */
-.cmp-table td[data-hidden] {
-  cursor: pointer;
-}
-
-.cmp-cover {
-  width: 100%;
-  min-height: 34px;
-  border: 0;
-  border-radius: 8px;
-  background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--accent) 16%, var(--anatomy-face)) 0 8px, var(--anatomy-face) 8px 16px);
-  color: var(--accent);
-  font: 700 15px var(--anatomy-mono);
-  cursor: pointer;
-}
-
-.cmp-cover:hover {
-  box-shadow: 0 0 0 1px var(--accent);
-}
 
 @media (max-width: 760px) {
   .pw-sim {
@@ -2459,5 +1628,745 @@ body.iso {
   }
   .dg-scroll > .dg-svg {
     min-width: 470px;
+  }
+}
+
+/* ======================================================================
+   Hero: the virtualization stack in 3D (plain CSS 3D, no WebGL)
+   ====================================================================== */
+@property --spin {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: -40deg;
+}
+
+/* A plain number (in em): a registered length cannot start in em, and unregistered it would only animate in jumps. */
+@property --gap {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 8;
+}
+
+@property --px {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --py {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --tz {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 3.25;
+}
+
+.hero-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 8px 32px;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.hero-grid h1 {
+  font-size: clamp(42px, 5.6vw, 76px);
+}
+
+.hero-grid .hero-sub {
+  margin: 22px 0 24px;
+}
+
+.hero-grid .hero-chips {
+  margin: 0;
+}
+
+/* Layer colours, shared by the 3D slabs and the legend buttons. */
+[data-layer] {
+  --c: oklch(0.68 0.03 250);
+}
+
+[data-layer="vmm"] {
+  --c: oklch(0.7 0.19 292);
+}
+
+[data-layer="vm"] {
+  --c: oklch(0.76 0.13 205);
+}
+
+[data-layer="guest"] {
+  --c: oklch(0.82 0.14 85);
+}
+
+[data-layer="app"] {
+  --c: oklch(0.74 0.19 350);
+}
+
+body.iso[data-theme="light"] [data-layer] {
+  --c: oklch(0.55 0.04 250);
+}
+
+body.iso[data-theme="light"] [data-layer="vmm"] {
+  --c: oklch(0.55 0.2 292);
+}
+
+body.iso[data-theme="light"] [data-layer="vm"] {
+  --c: oklch(0.6 0.13 205);
+}
+
+body.iso[data-theme="light"] [data-layer="guest"] {
+  --c: oklch(0.68 0.15 75);
+}
+
+body.iso[data-theme="light"] [data-layer="app"] {
+  --c: oklch(0.6 0.2 350);
+}
+
+.h3d-wrap {
+  display: grid;
+  gap: 4px;
+}
+
+.h3d {
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 1 / 0.95;
+  perspective: 2400px;
+  touch-action: pan-y;
+}
+
+.h3d-world {
+  --rx: calc(52deg - var(--py) * 6deg);
+  --rz: calc(var(--spin) + var(--px) * 12deg);
+  position: absolute;
+  left: 50%;
+  top: 71%;
+  font-size: clamp(4px, 1.6cqi, 12.5px);
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateZ(var(--rz));
+  animation:
+    h3d-spin 16s ease-in-out infinite alternate,
+    h3d-breathe 8s ease-in-out infinite alternate;
+  transition:
+    --px 0.8s var(--anatomy-ease),
+    --py 0.8s var(--anatomy-ease);
+}
+
+@keyframes h3d-spin {
+  from {
+    --spin: -50deg;
+  }
+  to {
+    --spin: -30deg;
+  }
+}
+
+@keyframes h3d-breathe {
+  from {
+    --gap: 7.2;
+  }
+  to {
+    --gap: 8.8;
+  }
+}
+
+.h3d-shadow {
+  position: absolute;
+  left: -25em;
+  top: -25em;
+  width: 50em;
+  height: 50em;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(0 0 0 / 0.55), transparent);
+  transform: translateZ(-0.6em);
+  pointer-events: none;
+}
+
+body.iso[data-theme="light"] .h3d-shadow {
+  background: radial-gradient(closest-side, rgb(0 0 0 / 0.16), transparent);
+}
+
+.slab {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w);
+  height: var(--d);
+  margin: calc(var(--d) / -2) 0 0 calc(var(--w) / -2);
+  transform-style: preserve-3d;
+  transform: translate3d(var(--x), var(--y), calc(var(--gap) * var(--z) * 1em + var(--lift)));
+  cursor: pointer;
+}
+
+.slab-top {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.55em;
+  border-radius: 0.45em;
+  transform: translateZ(var(--t));
+  background: linear-gradient(135deg, color-mix(in oklab, var(--c) 46%, var(--anatomy-card)), color-mix(in oklab, var(--c) 14%, var(--anatomy-card)));
+  box-shadow: inset 0 0 0 0.12em color-mix(in oklab, var(--c) 75%, transparent);
+  transition:
+    background 0.6s,
+    box-shadow 0.6s;
+}
+
+.slab > i {
+  position: absolute;
+  background: color-mix(in oklab, var(--c) 26%, var(--anatomy-page));
+  transition: background 0.6s;
+}
+
+.slab > i[data-side="s"] {
+  left: 0;
+  top: calc(var(--d) - var(--t));
+  width: 100%;
+  height: var(--t);
+  transform-origin: 50% 100%;
+  transform: rotateX(-90deg);
+  background: color-mix(in oklab, var(--c) 36%, var(--anatomy-page));
+}
+
+.slab > i[data-side="n"] {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: var(--t);
+  transform-origin: 50% 0;
+  transform: rotateX(90deg);
+}
+
+.slab > i[data-side="e"] {
+  top: 0;
+  left: calc(var(--w) - var(--t));
+  width: var(--t);
+  height: 100%;
+  transform-origin: 100% 50%;
+  transform: rotateY(90deg);
+  background: color-mix(in oklab, var(--c) 20%, var(--anatomy-page));
+}
+
+.slab > i[data-side="w"] {
+  top: 0;
+  left: 0;
+  width: var(--t);
+  height: 100%;
+  transform-origin: 0 50%;
+  transform: rotateY(-90deg);
+}
+
+.slab[data-on] .slab-top {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--c) 85%, var(--anatomy-card)), color-mix(in oklab, var(--c) 40%, var(--anatomy-card)));
+  box-shadow:
+    inset 0 0 0 0.14em var(--c),
+    0 0 3em color-mix(in oklab, var(--c) 60%, transparent);
+}
+
+.slab[data-on] > i {
+  background: color-mix(in oklab, var(--c) 52%, var(--anatomy-page));
+}
+
+.slab-label,
+.slab-chip {
+  font: 700 1.3em/1 var(--anatomy-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: color-mix(in oklab, var(--c) 35%, var(--anatomy-strong));
+}
+
+.slab-chip {
+  align-self: center;
+  font-size: 1.15em;
+  letter-spacing: 0.04em;
+}
+
+.slab[data-on] .slab-label,
+.slab[data-on] .slab-chip {
+  color: var(--anatomy-page);
+}
+
+/* The trap: a spark that falls from a guest onto the hypervisor and goes back up. It always faces the camera. */
+.h3d-trap {
+  position: absolute;
+  left: -1em;
+  top: -1em;
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 20%, oklch(0.86 0.17 70) 42%, transparent 72%);
+  box-shadow: 0 0 1.8em 0.5em oklch(0.82 0.17 70 / 0.55);
+  transform: translate3d(0, 11.8em, calc(var(--gap) * var(--tz) * 1em)) rotateZ(calc(-1 * var(--rz))) rotateX(calc(-1 * var(--rx)));
+  animation: h3d-trap 5s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes h3d-trap {
+  0%,
+  10% {
+    --tz: 3.25;
+    opacity: 0;
+  }
+  16% {
+    opacity: 1;
+  }
+  42%,
+  58% {
+    --tz: 1.22;
+    opacity: 1;
+  }
+  84% {
+    --tz: 3.25;
+    opacity: 1;
+  }
+  92%,
+  100% {
+    --tz: 3.25;
+    opacity: 0;
+  }
+}
+
+.slab[data-layer="vmm"] .slab-top::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  animation: h3d-hit 5s infinite;
+  pointer-events: none;
+}
+
+@keyframes h3d-hit {
+  0%,
+  38%,
+  66%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  46% {
+    box-shadow:
+      0 0 3em 0.6em oklch(0.85 0.17 70 / 0.5),
+      inset 0 0 0 0.16em oklch(0.88 0.16 70 / 0.9);
+  }
+}
+
+.h3d-cap {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 0 4px;
+}
+
+.h3d-kicker {
+  font: 11px var(--anatomy-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--anatomy-muted);
+}
+
+.h3d-cap strong {
+  font: 600 22px/1.2 var(--font-display), sans-serif;
+  color: var(--anatomy-strong);
+  animation: in 0.5s var(--anatomy-ease) both;
+}
+
+.h3d-cap p {
+  max-width: 52ch;
+  min-height: 3.2em;
+  margin: 0;
+  font-size: 15px;
+  animation: in 0.5s 0.05s var(--anatomy-ease) both;
+}
+
+.h3d-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.h3d-legend button {
+  padding: 4px 11px;
+  border: 1px solid color-mix(in oklab, var(--c) 55%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--anatomy-text);
+  font: 12px var(--anatomy-mono);
+  cursor: pointer;
+  transition:
+    background 0.3s,
+    color 0.3s,
+    box-shadow 0.3s;
+}
+
+.h3d-legend button[aria-pressed="true"] {
+  background: color-mix(in oklab, var(--c) 28%, transparent);
+  color: var(--anatomy-strong);
+  box-shadow: 0 0 16px -4px var(--c);
+}
+
+.h3d-legend button:focus-visible {
+  outline: 2px solid var(--c);
+  outline-offset: 2px;
+}
+
+.h3d-note {
+  font-size: 12.5px;
+  color: var(--anatomy-muted);
+}
+
+/* ======================================================================
+   Route map: the syllabus with a progress ring per topic
+   ====================================================================== */
+.route {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 10px;
+}
+
+.route-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 4px;
+  min-height: 108px;
+  padding: 14px 14px 12px;
+  border-radius: 14px;
+  text-decoration: none;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--accent) 16%, var(--anatomy-card)), var(--anatomy-card) 62%);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 32%, transparent);
+  transition:
+    transform 0.35s var(--anatomy-ease),
+    box-shadow 0.35s;
+  animation: in 0.8s var(--anatomy-ease) both;
+  animation-delay: calc(0.2s + var(--i, 0) * 45ms);
+}
+
+.route-card:hover,
+.route-card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 18px 30px -18px var(--accent);
+  outline: none;
+}
+
+.route-n {
+  font: 700 22px/1 var(--font-display), sans-serif;
+  color: var(--accent);
+}
+
+.route-title {
+  padding-right: 30px;
+  color: var(--anatomy-strong);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.route-tag {
+  align-self: end;
+  font: 11px var(--anatomy-mono);
+  color: var(--anatomy-muted);
+}
+
+.route-ring {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--p) * 1turn), color-mix(in oklab, var(--accent) 20%, transparent) 0);
+  mask: radial-gradient(circle, transparent 52%, #000 55%);
+}
+
+.route-ring[data-full] {
+  mask: none;
+  background: radial-gradient(circle, var(--anatomy-page) 0 30%, var(--accent) 34%);
+  box-shadow: 0 0 14px -2px var(--accent);
+}
+
+/* ======================================================================
+   End of each topic: memory hooks and true/false
+   ====================================================================== */
+.term-hot {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font: 600 10.5px/1.6 var(--anatomy-mono);
+  letter-spacing: 0.04em;
+  vertical-align: 2px;
+  color: var(--anatomy-page);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.term[data-hot] {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.sec-memo {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 20px;
+  align-items: start;
+  margin-top: 28px;
+}
+
+.mnemo {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 16px;
+  background: radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 62%), var(--anatomy-card);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.mnemo-kicker,
+.vf-kicker {
+  font: 11px var(--anatomy-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.mnemo-item {
+  display: grid;
+  gap: 2px;
+}
+
+.mnemo-key {
+  font: 700 clamp(20px, 2.4vw, 26px) / 1.15 var(--font-display), sans-serif;
+  background: linear-gradient(100deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mnemo-item p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.vf {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--anatomy-card);
+  box-shadow: 0 0 0 1px var(--line);
+  transition: box-shadow 0.5s;
+}
+
+.vf[data-won] {
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 44px -18px var(--accent);
+}
+
+.vf-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 12px;
+}
+
+.vf-head strong {
+  font: 600 18px var(--font-display), sans-serif;
+  color: var(--anatomy-strong);
+}
+
+.vf-score {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font: 700 13px var(--anatomy-mono);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent);
+}
+
+.vf-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vf-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--anatomy-face) 70%, transparent);
+  box-shadow: 0 0 0 1px var(--line);
+  transition:
+    background 0.3s,
+    box-shadow 0.3s;
+}
+
+.vf-list li[data-state] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.vf-list li[data-state="ok"] {
+  background: oklch(0.72 0.15 150 / 0.1);
+  box-shadow: 0 0 0 1px oklch(0.72 0.15 150 / 0.7);
+  animation: vf-pop 0.45s var(--anatomy-ease);
+}
+
+.vf-list li[data-state="bad"] {
+  background: oklch(0.66 0.2 25 / 0.1);
+  box-shadow: 0 0 0 1px oklch(0.66 0.2 25 / 0.7);
+  animation: vf-shake 0.45s;
+}
+
+.vf-s {
+  margin: 0;
+  font-size: 15px;
+  color: var(--anatomy-strong);
+}
+
+.vf-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.vf-btns button,
+.vf-foot button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--anatomy-card);
+  color: var(--anatomy-text);
+  font: 600 12px var(--anatomy-mono);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+
+.vf-btns button:hover,
+.vf-foot button:hover {
+  border-color: var(--accent);
+  color: var(--anatomy-strong);
+  transform: translateY(-1px);
+}
+
+.vf-btns button:focus-visible,
+.vf-foot button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.vf-why {
+  margin: 0;
+  font-size: 14px;
+}
+
+.vf-list li[data-state="ok"] .vf-why b {
+  color: oklch(0.74 0.16 150);
+}
+
+.vf-list li[data-state="bad"] .vf-why b {
+  color: oklch(0.7 0.19 25);
+}
+
+body.iso[data-theme="light"] .vf-list li[data-state="ok"] .vf-why b {
+  color: oklch(0.5 0.15 150);
+}
+
+body.iso[data-theme="light"] .vf-list li[data-state="bad"] .vf-why b {
+  color: oklch(0.52 0.2 25);
+}
+
+.vf-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.vf-win {
+  position: relative;
+  font: 700 17px var(--font-display), sans-serif;
+  color: var(--accent);
+}
+
+.vf-confetti {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+}
+
+.vf-confetti i {
+  position: absolute;
+  width: 6px;
+  height: 10px;
+  border-radius: 2px;
+  background: hsl(calc(var(--k) * 26) 85% 62%);
+  opacity: 0;
+  animation: vf-burst 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes vf-burst {
+  from {
+    opacity: 1;
+    transform: rotate(calc(var(--k) * 25.7deg)) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(calc(var(--k) * 25.7deg)) translateY(-60px) rotate(200deg);
+  }
+}
+
+@keyframes vf-pop {
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+@keyframes vf-shake {
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-grid,
+  .sec-memo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .vf-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .route {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .route-card {
+    min-height: 96px;
+    padding: 12px;
   }
 }

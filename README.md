@@ -4,7 +4,7 @@ Resumen visual e interactivo del primer parcial de Arquitectura de Sistemas Virt
 
 **Web:** https://juandiego-bmu.github.io/temario-sistemas-virtualizados/
 
-Incluye figuras isométricas que se mueven (tipos de hipervisor, datastore thin/thick, cadena de snapshots copy-on-write, full vs linked clones), diagramas interactivos paso a paso, un constructor de comandos QEMU, un generador de topologías, retos de laboratorio, un banco de preguntas tipo test y flashcards.
+Nueve temas con solo lo que se pregunta. La portada es la pila de la virtualización en 3D (CSS, sin WebGL). Cada tema tiene sus ideas clave (con modo repaso), una o dos figuras que se mueven, un truco para recordarlo y un verdadero o falso que guarda el progreso en el navegador. Al final, un banco de preguntas tipo test y la chuleta de comandos del laboratorio.
 
 ## Ejecutarla en local
 

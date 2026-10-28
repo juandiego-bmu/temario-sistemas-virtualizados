@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Choice } from "../figs/common";
-import { Arrow, Box, Diagram, MiniQuiz, useShow } from "./kit";
+import { Arrow, Box, Diagram, useShow } from "./kit";
 
 const EI = "M137 80 C104 96 104 124 137 140";
 const EVI = "M423 80 C456 96 456 124 423 140";
@@ -118,87 +118,6 @@ export function IsomorphismDiagram() {
   );
 }
 
-const OS_MAP = [
-  ["CPU", "Procesos", "CPU virtual"],
-  ["RAM", "Espacio lógico", "RAM virtual"],
-  ["Disco", "Ficheros", "Disco virtual"],
-  ["NIC", "Sockets", "NIC virtual"],
-] as const;
-
-/** The same picture read twice: what an OS makes of the hardware, and what a hypervisor makes of it. */
-export function HvVsOsDiagram() {
-  const [hv, setHv] = React.useState(true);
-  useShow("hvos", (key) => setHv(key === "hv"));
-  return (
-    <Diagram
-      ns="hvos"
-      title="Hipervisor vs sistema operativo"
-      kicker="Comparativa"
-      label="Los dos ocultan el hardware real. El sistema operativo lo ofrece como procesos, espacio lógico, ficheros y sockets a sus procesos. El hipervisor lo ofrece como CPU, RAM, disco y NIC virtuales a sus máquinas virtuales."
-      viewBox="0 0 560 300"
-      controls={
-        <Choice
-          label="Mira con ojos de"
-          value={hv ? "hv" : "so"}
-          options={[
-            { value: "so", text: "Sistema operativo" },
-            { value: "hv", text: "Hipervisor" },
-          ]}
-          onChange={(v) => setHv(v === "hv")}
-        />
-      }
-      note={
-        hv ? (
-          <>
-            El hipervisor ofrece el hardware como <b>recursos hardware virtuales</b>. Sus clientes son <b>máquinas virtuales</b> y lo que se ejecuta en ellas son <b>sistemas operativos</b>.
-          </>
-        ) : (
-          <>
-            El sistema operativo ofrece el hardware como <b>servicios de alto nivel</b>. Sus clientes son <b>procesos</b> y lo que se ejecuta en ellos son <b>programas y aplicaciones</b>.
-          </>
-        )
-      }
-    >
-      {[0, 1, 2].map((i) => (
-        <g key={i} className="swap">
-          <rect className={hv ? "dg-node hvc" : "dg-node osc"} x={40 + i * 170} y={14} width={140} height={58} rx={10} />
-          <text className="dg-t" x={110 + i * 170} y={38} textAnchor="middle">
-            {hv ? `Máquina virtual ${i + 1}` : `Proceso ${i + 1}`}
-          </text>
-          <text className="dg-s" x={110 + i * 170} y={56} textAnchor="middle">
-            {hv ? "ejecuta un SO guest" : "ejecuta un programa"}
-          </text>
-          <Arrow x1={110 + i * 170} y1={110} x2={110 + i * 170} y2={78} />
-        </g>
-      ))}
-      <rect className={hv ? "dg-node kern hv" : "dg-node kern"} x={30} y={110} width={500} height={36} rx={8} />
-      <text className="dg-t" x={280} y={133} textAnchor="middle">
-        {hv ? "Kernel del hipervisor (VMM)" : "Kernel del sistema operativo"}
-      </text>
-      {OS_MAP.map(([res, os, vm], i) => {
-        const x = 30 + i * 128;
-        return (
-          <g key={res}>
-            <rect className="dg-node" x={x} y={170} width={116} height={40} rx={8} />
-            <text className="dg-t accent-text" x={x + 58} y={195} textAnchor="middle" key={hv ? "a" : "b"}>
-              {hv ? vm : os}
-            </text>
-            <Arrow x1={x + 58} y1={240} x2={x + 58} y2={214} />
-            <Arrow x1={x + 58} y1={170} x2={x + 58} y2={150} />
-            <rect className="dg-node hw" x={x + 18} y={244} width={80} height={30} rx={6} />
-            <text className="dg-t" x={x + 58} y={264} textAnchor="middle">
-              {res}
-            </text>
-          </g>
-        );
-      })}
-      <text className="dg-kick" x={280} y={294} textAnchor="middle">
-        hardware real
-      </text>
-    </Diagram>
-  );
-}
-
 const EVENTS = [
   { id: "io", text: "La MV ejecuta OUT al puerto del disco", to: "int", why: "Es una instrucción privilegiada: provoca un trap. El dispatcher la pasa al intérprete, que simula el efecto en el controlador de disco virtual." },
   { id: "ptbr", text: "La MV carga un nuevo mapa de memoria (PTBR)", to: "alloc", why: "Intenta cambiar los recursos que tiene asignados: el dispatcher llama al allocator, que decide qué memoria real le corresponde." },
@@ -252,45 +171,5 @@ export function ModulesDiagram() {
         estado de la CPU virtual
       </text>
     </Diagram>
-  );
-}
-
-export function MotivationsQuiz() {
-  return (
-    <MiniQuiz
-      title="¿Qué motivación es?"
-      questions={[
-        {
-          q: "Una empresa pasa de 20 servidores físicos medio vacíos a 3 servidores con 20 MVs.",
-          options: ["Consolidación (y green computing)", "Software obsoleto", "Emulación de otra arquitectura", "Balanceo de carga"],
-          ok: 0,
-          why: "Varios sistemas sobre el mismo hardware: menos máquinas que comprar, alimentar y gestionar.",
-        },
-        {
-          q: "Abres un adjunto sospechoso dentro de una MV desechable.",
-          options: ["Despliegue masivo", "Seguridad y aislamiento (sandbox)", "Migración", "Consolidación"],
-          ok: 1,
-          why: "El aislamiento impide que lo que pase en esa MV afecte al resto del sistema.",
-        },
-        {
-          q: "Un banco necesita seguir usando un programa que solo funciona en un sistema de los 90.",
-          options: ["Green computing", "Failover", "Ejecución de software obsoleto (legacy)", "What-if"],
-          ok: 2,
-          why: "La MV ofrece el hardware y el SO antiguos que ese programa espera.",
-        },
-        {
-          q: "Un servidor físico entra en mantenimiento y sus MVs se mueven a otro sin parar el servicio.",
-          options: ["Infraestructura a prueba de fallos (migración)", "Emulación", "Software obsoleto", "Sandbox"],
-          ok: 0,
-          why: "Failover: las MVs no están atadas a un hardware concreto y se pueden migrar o clonar.",
-        },
-        {
-          q: "Pruebas una actualización arriesgada y, si sale mal, vuelves atrás en segundos.",
-          options: ["Balanceo de carga", "Simulación y experimentación (what-if)", "Consolidación", "Emulación"],
-          ok: 1,
-          why: "Pruebas what-if: con un snapshot vuelves al estado anterior al instante.",
-        },
-      ]}
-    />
   );
 }

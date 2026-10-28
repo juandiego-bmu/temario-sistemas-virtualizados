@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { EXTRAS, PARTS, TOPICS } from "./topics";
+import { REVIEW, TOPICS } from "./topics";
 
-const ALL = [EXTRAS[0], ...TOPICS, ...EXTRAS.slice(1)].map((t) => ({ ...t, part: "part" in t ? t.part : "" }));
+const ALL = [...TOPICS, ...REVIEW];
 
 /** Fixed bar naming the topic you are reading, in that topic's colour, with a segment per topic. */
 export function TopicBar() {
@@ -32,14 +32,15 @@ export function TopicBar() {
     return () => observer.disconnect();
   }, []);
   const t = ALL.find((x) => x.id === current);
-  const part = t && PARTS.find((p) => p.id === t.part);
   return (
     <nav className="topicbar" data-on={t ? "" : undefined} style={t ? ({ "--h": t.hue } as React.CSSProperties) : undefined} aria-label="Tema actual">
       {t ? (
         <a className="tb-now" href={`#${t.id}`} key={t.id}>
           <span className="tb-n">{t.n}</span>
           <span className="tb-title">{t.title}</span>
-          <span className="tb-tag">{part ? `Parte ${part.id} · ${t.tag}` : t.tag}</span>
+          <span className="tb-tag">
+            {t.kind} · {t.tag}
+          </span>
         </a>
       ) : null}
       <ol className="tb-steps">

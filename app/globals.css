@@ -109,6 +109,8 @@ h2 {
 }
 
 .theme {
+  flex: none;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -164,63 +166,6 @@ h2 {
   margin: 24px 0 48px;
   font-size: 18px;
   animation: in 1s 0.15s var(--anatomy-ease) both;
-}
-
-.map {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 10px;
-  perspective: 900px;
-}
-
-.map-card {
-  display: grid;
-  gap: 4px;
-  padding: 14px;
-  min-height: 108px;
-  text-decoration: none;
-  background: color-mix(in srgb, var(--anatomy-card) 88%, transparent);
-  box-shadow: 0 0 0 1px var(--line);
-  backdrop-filter: blur(4px);
-  transition: transform 0.35s var(--anatomy-ease), box-shadow 0.35s;
-  animation: in 0.8s var(--anatomy-ease) both;
-}
-
-.map-card:nth-child(n) {
-  animation-delay: calc(0.25s + var(--i, 0) * 40ms);
-}
-
-.map-card {
-  border-top: 3px solid var(--accent);
-}
-
-.map-card.special {
-  background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 22%, var(--anatomy-card)), var(--anatomy-card));
-}
-
-.map-card:hover,
-.map-card:focus-visible {
-  transform: translateZ(30px) rotateX(8deg);
-  box-shadow: 0 0 0 1px var(--accent), 0 18px 30px -18px var(--accent);
-  outline: none;
-}
-
-.map-n {
-  font: 600 12px var(--anatomy-mono);
-  color: var(--accent);
-}
-
-.map-title {
-  color: var(--anatomy-strong);
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.map-tag {
-  align-self: end;
-  font: 11px var(--anatomy-mono);
-  color: var(--anatomy-muted);
 }
 
 /* ---------- sections ---------- */
@@ -335,8 +280,9 @@ body.iso[data-theme="light"] [style*="--h"] {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* Wide cards: the practice topics carry whole commands. */
 .sec-body.solo .terms {
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
 }
 
 .sec-fig {
@@ -396,31 +342,6 @@ body.iso[data-theme="light"] [style*="--h"] {
 .formula-ex {
   font-size: 14px;
   color: var(--anatomy-muted);
-}
-
-.timeline {
-  display: grid;
-  gap: 8px;
-  padding-left: 14px;
-  border-left: 1px solid var(--line);
-}
-
-.tl {
-  display: grid;
-  grid-template-columns: 48px 92px 1fr;
-  gap: 8px;
-  align-items: baseline;
-  font-size: 14px;
-}
-
-.tl-year {
-  font: 12px var(--anatomy-mono);
-  color: var(--accent);
-}
-
-.tl-name {
-  color: var(--anatomy-strong);
-  font-weight: 600;
 }
 
 /* ---------- figure card ---------- */
@@ -765,11 +686,6 @@ body.iso[data-theme="light"] [style*="--h"] {
   font: 10.5px var(--anatomy-mono);
 }
 
-.dg-big {
-  font: 700 26px var(--font-display), sans-serif;
-  fill: var(--anatomy-page) !important;
-}
-
 .dg-kick {
   font: 10px var(--anatomy-mono);
   letter-spacing: 0.12em;
@@ -813,10 +729,6 @@ body.iso[data-theme="light"] [style*="--h"] {
   stroke: var(--anatomy-blue);
 }
 
-.dg-wire.neg {
-  stroke: var(--anatomy-red);
-}
-
 .dg-wire.accent-line {
   stroke: var(--accent);
   stroke-width: 2;
@@ -855,29 +767,6 @@ body.iso[data-theme="light"] [style*="--h"] {
   opacity: 0.35;
 }
 
-.dg-dim {
-  opacity: 0.4;
-}
-
-.dg-px {
-  fill: var(--anatomy-face);
-  stroke: var(--line);
-  transition: fill 0.3s;
-}
-
-.dg-px.ink {
-  fill: color-mix(in oklab, var(--anatomy-strong) 55%, var(--anatomy-card));
-}
-
-.dg-px.hot {
-  fill: var(--accent);
-}
-
-.dg-px.zero {
-  fill: transparent;
-  stroke-dasharray: 2 2;
-}
-
 .dg-bar {
   fill: var(--anatomy-mid);
   transition: width 0.3s, x 0.3s;
@@ -890,44 +779,6 @@ body.iso[data-theme="light"] [style*="--h"] {
 .dg-bar.accent {
   fill: var(--accent);
 }
-
-.dg-bar.grad {
-  fill: var(--accent);
-  opacity: 0.85;
-}
-
-.dg-curve {
-  fill: none;
-  stroke: var(--anatomy-hi);
-  stroke-width: 2;
-}
-
-.dg-curve.train,
-.dg-dot.train {
-  stroke: var(--anatomy-blue);
-}
-
-.dg-curve.val,
-.dg-dot.val {
-  stroke: var(--anatomy-red);
-}
-
-.dg-dot {
-  fill: var(--anatomy-card);
-  stroke: var(--accent);
-  stroke-width: 2;
-}
-
-.dg-axis,
-.dg-cursor {
-  fill: none;
-  stroke: var(--anatomy-mid);
-}
-
-.dg-cursor {
-  stroke-dasharray: 3 4;
-}
-
 
 .slider,
 .num {
@@ -1094,280 +945,8 @@ body.iso[data-theme="light"] [style*="--h"] {
 }
 
 /* ---------- mind map ---------- */
-.mm-wrap {
-  overflow-x: auto;
-}
-
-.mm {
-  display: block;
-  min-width: 760px;
-  width: 100%;
-  height: auto;
-}
-
-.mm-branch {
-  transition: opacity 0.35s;
-}
-
-.mm-branch[data-dim] {
-  opacity: 0.18;
-}
-
-.mm-trunk {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 5;
-  stroke-linecap: round;
-}
-
-.mm-twig {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.6;
-  opacity: 0.7;
-}
-
-.mm-leaf circle {
-  fill: var(--accent);
-}
-
-.mm-leaf text {
-  font: 500 14px var(--font-sans), sans-serif;
-  fill: var(--anatomy-strong);
-}
-
-.mm-leaf:hover text,
-.mm-leaf:focus-visible text {
-  fill: var(--accent);
-  text-decoration: underline;
-}
-
-.mm-node {
-  cursor: pointer;
-}
-
-.mm-node rect {
-  fill: var(--accent);
-  transition: filter 0.2s;
-}
-
-.mm-node:hover rect,
-.mm-node:focus-visible rect {
-  filter: brightness(1.15);
-}
-
-.mm-node:focus-visible {
-  outline: none;
-}
-
-.mm-node text {
-  font: 700 16px var(--font-display), sans-serif;
-  fill: var(--anatomy-page);
-}
-
-.mm-centre circle {
-  fill: var(--anatomy-card);
-  stroke: var(--anatomy-strong);
-  stroke-width: 2;
-}
-
-.mm-centre text {
-  font: 700 20px var(--font-display), sans-serif;
-  fill: var(--anatomy-strong);
-}
-
-.mm-hint {
-  margin: 8px 0 0;
-  font-size: 14px;
-  color: var(--anatomy-muted);
-}
 
 /* ---------- comparison ---------- */
-.cmp {
-  display: grid;
-  gap: 28px;
-}
-
-.cmp h3 {
-  margin: 0 0 12px;
-  color: var(--anatomy-strong);
-  font-family: var(--font-display), sans-serif;
-  font-size: 22px;
-}
-
-.cmp-same {
-  padding: 20px 24px;
-  border-radius: 16px;
-  background: linear-gradient(90deg, oklch(0.6 0.12 215 / 0.18), oklch(0.6 0.12 150 / 0.18), oklch(0.65 0.12 40 / 0.18), oklch(0.65 0.12 75 / 0.18));
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.cmp-same ul {
-  margin: 0;
-  padding-left: 20px;
-  display: grid;
-  gap: 6px;
-}
-
-.cmp-scroll {
-  overflow-x: auto;
-  border-radius: 16px;
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.cmp-scroll:focus-visible {
-  outline: 2px solid var(--accent);
-}
-
-.cmp-table {
-  width: 100%;
-  min-width: 880px;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.cmp-table th,
-.cmp-table td {
-  padding: 12px 14px;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--line);
-}
-
-.cmp-table tbody th {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  width: 130px;
-  background: var(--anatomy-card);
-  color: var(--anatomy-strong);
-  font: 600 12px var(--anatomy-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.cmp-corner {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: var(--anatomy-card);
-  font: 600 12px var(--anatomy-mono);
-  color: var(--anatomy-muted);
-  text-transform: uppercase;
-  vertical-align: bottom !important;
-}
-
-.cmp-col {
-  border-top: 5px solid var(--accent);
-  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 22%, var(--anatomy-card)), var(--anatomy-card));
-  cursor: default;
-}
-
-.cmp-short {
-  display: block;
-  font: 700 26px var(--font-display), sans-serif;
-  color: var(--accent);
-}
-
-.cmp-name {
-  display: block;
-  color: var(--anatomy-strong);
-  font-weight: 600;
-}
-
-.cmp-practice {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--accent);
-  font: 11px var(--anatomy-mono);
-  color: var(--accent);
-}
-
-.cmp-table td {
-  background: color-mix(in oklab, var(--accent) 5%, var(--anatomy-card));
-  box-shadow: inset 3px 0 0 color-mix(in oklab, var(--accent) 50%, transparent);
-  transition: background 0.25s, opacity 0.25s;
-}
-
-.cmp-table td[data-on],
-.cmp-col[data-on] {
-  background: color-mix(in oklab, var(--accent) 20%, var(--anatomy-card));
-}
-
-.cmp-table td[data-dim] {
-  opacity: 0.5;
-}
-
-.cmp-rel {
-  padding: 20px;
-  border-radius: 16px;
-  background: var(--anatomy-card);
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.rel {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.rel-node rect {
-  fill: color-mix(in oklab, var(--accent) 22%, var(--anatomy-card));
-  stroke: var(--accent);
-  stroke-width: 2;
-  transition: fill 0.25s;
-}
-
-.rel-node[data-on] rect {
-  fill: color-mix(in oklab, var(--accent) 45%, var(--anatomy-card));
-}
-
-.rel-node[data-dim] {
-  opacity: 0.45;
-}
-
-.rel-node {
-  transition: opacity 0.25s;
-}
-
-.rel-title {
-  font: 700 18px var(--font-display), sans-serif;
-  fill: var(--anatomy-strong);
-}
-
-.rel-sub {
-  font: 11px var(--anatomy-mono);
-  fill: var(--anatomy-text);
-}
-
-.rel-edge path {
-  fill: none;
-  stroke: var(--anatomy-mid);
-  stroke-width: 2;
-  marker-end: url(#rel-arrow);
-  transition: stroke 0.25s;
-}
-
-.rel-edge[data-on] path {
-  stroke: var(--anatomy-strong);
-  stroke-width: 3;
-}
-
-.rel-edge text {
-  font: 11.5px var(--anatomy-mono);
-  fill: var(--anatomy-text);
-  paint-order: stroke;
-  stroke: var(--anatomy-card);
-  stroke-width: 5px;
-}
-
-.rel-head {
-  fill: var(--anatomy-mid);
-}
 
 /* ---------- reveal on scroll ---------- */
 @supports (animation-timeline: view()) {
@@ -1410,12 +989,8 @@ body.iso[data-theme="light"] [style*="--h"] {
 }
 
 @media (max-width: 560px) {
-  .tl {
-    grid-template-columns: 40px 1fr;
-  }
-  .tl-note {
-    grid-column: 1 / -1;
-  }
+  
+  
   .hero-top {
     margin-bottom: 40px;
   }
@@ -1430,176 +1005,4 @@ body.iso[data-theme="light"] [style*="--h"] {
   }
 }
 /* ---------- practice summary ---------- */
-.pr {
-  display: grid;
-  gap: 24px;
-}
-
-.pr h3 {
-  margin: 0;
-  color: var(--anatomy-strong);
-  font-family: var(--font-display), sans-serif;
-  font-size: 20px;
-}
-
-.pr-chain-wrap {
-  padding: 20px;
-  border-radius: 16px;
-  background: var(--anatomy-card);
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.pr-chain {
-  display: block;
-  width: 100%;
-  max-width: 820px;
-  height: auto;
-  margin: 8px auto 0;
-}
-
-.pr-edge path {
-  fill: none;
-  stroke: var(--anatomy-mid);
-  stroke-width: 1.8;
-  marker-end: url(#pr-arrow);
-}
-
-.pr-edge text {
-  font: 11px var(--anatomy-mono);
-  fill: var(--anatomy-text);
-  paint-order: stroke;
-  stroke: var(--anatomy-card);
-  stroke-width: 5px;
-}
-
-.pr-arrowhead {
-  fill: var(--anatomy-mid);
-}
-
-.pr-node rect {
-  fill: color-mix(in oklab, var(--accent) 22%, var(--anatomy-card));
-  stroke: var(--accent);
-  stroke-width: 2;
-  transition: fill 0.2s;
-}
-
-.pr-node:hover rect,
-.pr-node:focus-visible rect {
-  fill: color-mix(in oklab, var(--accent) 40%, var(--anatomy-card));
-}
-
-.pr-node:focus-visible {
-  outline: none;
-}
-
-.pr-node-id {
-  font: 700 16px var(--font-display), sans-serif;
-  fill: var(--accent);
-}
-
-.pr-node-t {
-  font: 10.5px var(--anatomy-mono);
-  fill: var(--anatomy-strong);
-}
-
-.pr-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-  gap: 16px;
-}
-
-.pr-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 18px;
-  border-radius: 16px;
-  border-top: 5px solid var(--accent);
-  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 10%, var(--anatomy-card)), var(--anatomy-card) 160px);
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 35%, var(--line));
-  scroll-margin-top: 70px;
-}
-
-.pr-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-.pr-id {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  flex: none;
-  border-radius: 14px;
-  font: 700 20px var(--font-display), sans-serif;
-  color: var(--anatomy-page);
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-}
-
-.pr-tool {
-  font: 11px var(--anatomy-mono);
-  color: var(--accent);
-}
-
-.pr-goal {
-  margin: 0 0 6px;
-  color: var(--anatomy-strong);
-}
-
-.pr-card h4 {
-  margin: 8px 0 2px;
-  font: 600 11px var(--anatomy-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.pr-card ul {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 3px;
-  font-size: 14px;
-}
-
-.pr-card li::marker {
-  color: var(--accent);
-}
-
-.pr-key {
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  background: color-mix(in oklab, var(--accent) 14%, var(--anatomy-card));
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.pr-key b {
-  color: var(--accent);
-}
-
-.pr-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: auto;
-  padding-top: 12px;
-}
-
-.pr-links a {
-  padding: 3px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font: 11px var(--anatomy-mono);
-  text-decoration: none;
-}
-
-.pr-links a:hover {
-  background: color-mix(in oklab, var(--accent) 15%, transparent);
-}
 
