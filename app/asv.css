@@ -2909,3 +2909,384 @@ body.iso[data-theme="light"] .vf-list li[data-state="bad"] .vf-why b {
     font-size: 8.5px;
   }
 }
+
+/* ======================================================================
+   P2 test bench: four network modes, a packet you can follow, VXLAN envelopes
+   ====================================================================== */
+
+.p2-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 10px 24px;
+  margin-top: 14px;
+}
+
+.p2-lead {
+  margin: 0;
+  font-size: 15px;
+  color: var(--anatomy-text);
+}
+
+.p2-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 6px;
+}
+
+.p2-facts span {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--accent) 14%, var(--anatomy-face));
+  color: var(--anatomy-strong);
+  font: 11.5px var(--anatomy-mono);
+}
+
+.p2-analogy {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--anatomy-muted);
+}
+
+.p2-intro .cmd {
+  grid-column: 1 / -1;
+}
+
+/* The drawing takes the full card width; experiments and the packet log sit side by side under it. */
+.p2-body {
+  display: grid;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.p2-draw {
+  min-width: 0;
+}
+
+.p2-draw .dg-scroll {
+  overflow-x: auto;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--anatomy-page) 55%, var(--anatomy-card));
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.p2-draw .dg-scroll > .p2-svg {
+  min-width: 620px;
+}
+
+.p2-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  align-content: start;
+  gap: 16px 22px;
+  min-width: 0;
+}
+
+.p2-logbox {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.p2-side .choice-label {
+  display: block;
+  margin-bottom: 6px;
+  font: 11px var(--anatomy-mono);
+}
+
+.p2-exps {
+  display: grid;
+  gap: 6px;
+}
+
+.p2-exps button {
+  padding: 8px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--anatomy-card);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--anatomy-text);
+  font: 13.5px var(--font-sans), sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.2s, color 0.2s;
+}
+
+.p2-exps button::before {
+  content: "▶ ";
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.p2-exps button:hover:not(:disabled),
+.p2-exps button[aria-pressed="true"] {
+  color: var(--anatomy-strong);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.p2-exps button:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.p2-exps button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.p2-toggles {
+  display: grid;
+  gap: 6px;
+}
+
+.p2-toggles .qb-check {
+  align-items: flex-start;
+  line-height: 1.35;
+}
+
+.p2-log {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0 0 0 20px;
+  font-size: 13.5px;
+  color: var(--anatomy-text);
+}
+
+.p2-log li::marker {
+  color: var(--anatomy-muted);
+  font: 11px var(--anatomy-mono);
+}
+
+.p2-log li[data-now] {
+  color: var(--anatomy-strong);
+}
+
+.p2-log li[data-now]::marker {
+  color: var(--accent);
+}
+
+.p2-log li[data-bad] {
+  color: var(--anatomy-strong);
+}
+
+.p2-log li[data-bad]::marker {
+  color: var(--anatomy-red);
+}
+
+.p2-tag {
+  display: block;
+  color: var(--accent);
+  font: 600 10.5px var(--anatomy-mono);
+  letter-spacing: 0.04em;
+}
+
+.p2-verdict {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--anatomy-red) 12%, var(--anatomy-card));
+}
+
+.p2-verdict[data-ok] {
+  background: color-mix(in oklab, var(--anatomy-green) 12%, var(--anatomy-card));
+}
+
+/* the drawing */
+.p2-node rect {
+  transition: stroke 0.15s, stroke-width 0.15s, opacity 0.3s;
+}
+
+.p2-node.k-ext rect {
+  fill: var(--anatomy-card);
+  stroke-dasharray: 4 4;
+}
+
+.p2-node[data-hit] rect {
+  stroke: var(--anatomy-strong);
+  stroke-width: 3;
+}
+
+.p2-node[data-off] {
+  opacity: 0.3;
+}
+
+.dg-wire.p2-dash {
+  stroke-dasharray: 5 6;
+  opacity: 0.7;
+}
+
+.dg-wire.p2-err {
+  stroke: var(--anatomy-red);
+  stroke-width: 2.2;
+  stroke-dasharray: 7 5;
+}
+
+.dg-wire.p2-tun {
+  stroke: var(--accent);
+  stroke-width: 2.4;
+}
+
+.p2-ll,
+.p2-pkt-tag {
+  paint-order: stroke;
+  stroke: var(--anatomy-card);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.p2-ll.p2-err {
+  fill: var(--anatomy-red) !important;
+}
+
+.p2-ll.p2-tun {
+  fill: var(--accent) !important;
+  font-weight: 700;
+}
+
+.p2-pkt-tag {
+  fill: var(--anatomy-strong) !important;
+  font-weight: 700;
+}
+
+.p2-env {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.p2-pkt[data-wrap] .p2-env {
+  opacity: 1;
+}
+
+.p2-x circle {
+  fill: var(--anatomy-card);
+  stroke: var(--anatomy-red);
+  stroke-width: 2;
+}
+
+/* VXLAN envelopes */
+.p2-nest {
+  display: grid;
+  min-height: 230px;
+  margin-top: 14px;
+}
+
+.p2-lay {
+  display: grid;
+  gap: 6px;
+  padding: 7px 10px 10px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--accent) 8%, var(--anatomy-card));
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+
+.p2-lay[data-plain] {
+  background: var(--anatomy-face);
+  box-shadow: 0 0 0 1.5px var(--anatomy-mid);
+}
+
+.p2-lay-h {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--accent);
+  font: 600 11px var(--anatomy-mono);
+}
+
+.p2-lay[data-plain] > .p2-lay-h {
+  color: var(--anatomy-text);
+}
+
+.p2-inner {
+  padding: 4px 2px 6px;
+  color: var(--anatomy-strong);
+  font: 12px/1.6 var(--anatomy-mono);
+}
+
+.p2-fresh {
+  animation: p2-pop 0.35s var(--anatomy-ease);
+}
+
+@keyframes p2-pop {
+  from {
+    transform: scale(0.97);
+    opacity: 0.4;
+  }
+}
+
+.p2-bytes {
+  align-self: center;
+  color: var(--anatomy-muted);
+  font: 12px var(--anatomy-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.p2-layers {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+  color: var(--anatomy-text);
+}
+
+.p2-layers li[data-cur] {
+  color: var(--anatomy-strong);
+}
+
+.p2-layers li[data-dim] {
+  opacity: 0.45;
+}
+
+/* the four side by side */
+.p2-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.p2-table th,
+.p2-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.p2-table tr:last-child > * {
+  border-bottom: 0;
+}
+
+.p2-table thead th {
+  border-bottom: 2px solid var(--accent);
+  color: var(--accent);
+  font: 600 15px var(--font-display), sans-serif;
+}
+
+.p2-table tbody th {
+  width: 140px;
+  color: var(--anatomy-muted);
+  font: 600 11.5px var(--anatomy-mono);
+}
+
+@media (max-width: 900px) {
+  .p2-intro,
+  .p2-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .p2-logbox {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p2-fresh {
+    animation: none;
+  }
+}

@@ -4,7 +4,7 @@ Resumen visual e interactivo del primer parcial de Arquitectura de Sistemas Virt
 
 **Web:** https://juandiego-bmu.github.io/temario-sistemas-virtualizados/
 
-Nueve temas con solo lo que se pregunta. La portada es la pila de la virtualización en 3D (CSS, sin WebGL). Cada tema tiene sus ideas clave (con modo repaso), una o dos figuras que se mueven, un truco para recordarlo y un verdadero o falso que guarda el progreso en el navegador. Al final, el laboratorio 3D: las prácticas 1 y 2 como un videojuego (three.js), donde escribes los comandos en un terminal simulado y ves en 3D lo que hacen, con misiones guiadas; después, un banco de preguntas tipo test y la chuleta de comandos del laboratorio.
+Nueve temas con solo lo que se pregunta. La portada es la pila de la virtualización en 3D (CSS, sin WebGL). Cada tema tiene sus ideas clave (con modo repaso), una o dos figuras que se mueven, un truco para recordarlo y un verdadero o falso que guarda el progreso en el navegador. Después, «Redes de la P2, paso a paso»: un banco de pruebas con las cuatro configuraciones de red de la práctica 2 (red user, bridge privado, bridge público y VXLAN), donde sigues cada paquete salto a salto y provocas los errores típicos, más los sobres de VXLAN por dentro. Al final, el laboratorio 3D: las prácticas 1 y 2 como un videojuego (three.js), donde escribes los comandos en un terminal simulado y ves en 3D lo que hacen, con misiones guiadas; después, un banco de preguntas tipo test y la chuleta de comandos del laboratorio.
 
 El simulador del laboratorio tiene su autotest, que recorre las dos prácticas y sus trampas:
 

@@ -7,6 +7,7 @@ import { TopologyLab } from "@/components/diagrams/lab";
 import { NestedWalkGrid, PagingCalculator, ThreeSpacesDiagram } from "@/components/diagrams/memory";
 import { HostedNetModes, VlanDiagram } from "@/components/diagrams/network";
 import { PopekSetsDiagram, VcpuMatrix } from "@/components/diagrams/popek";
+import { NetBench, P2Quiz, P2Table, VxlanEnvelope } from "@/components/diagrams/p2bench";
 import { CommandAnatomy, PowerSim, SlirpDiagram } from "@/components/diagrams/practice";
 import { DatastoreFigure } from "@/components/figs/datastore";
 import { LabSim } from "@/components/sim/LabSim";
@@ -527,6 +528,15 @@ export default function Page() {
             <code>nmcli connection delete bridge1</code>, <code>nmcli device delete br1</code> y cierra los puertos con <code>firewall-cmd --remove-port</code>.
           </T>
         </Topic>
+
+        <Review id="redes" lead="Las cuatro formas de enchufar una MV en la práctica 2, de la más aislada a la más conectada: red user, bridge privado, bridge público y overlay VXLAN. Elige una, lanza un experimento y sigue el paquete salto a salto; activa los errores típicos para ver dónde se bloquea.">
+          <div className="dg-grid">
+            <NetBench />
+            <VxlanEnvelope />
+            <P2Quiz />
+            <P2Table />
+          </div>
+        </Review>
 
         <Review id="sim" lead="Las prácticas como un videojuego: escribe los comandos de verdad y mira en 3D lo que hacen. Entras por la VPN y SSH al servidor, creas los discos, arrancas máquinas dentro de él y las conectas en red. Pulsa cualquier pieza para ver qué es.">
           <LabSim />
