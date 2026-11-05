@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Lab3D } from "./Lab3D";
+import { LABS } from "./labs";
 import { MISSIONS } from "./missions";
 import { baseName, chain, dirOf, exec, hostOf, newLab, prompt, real, refresh, top, ttyOf, vmName, vmOf, type Lab, type Line } from "./model";
 import type { World } from "./scene";
@@ -35,8 +37,27 @@ const where = (lab: Lab) => {
   return f.k === "monitor" ? `el monitor de QEMU de ${name}` : `la MV ${name}${f.via === "telnet" ? " por telnet" : f.via === "ssh" ? " por SSH" : ""}`;
 };
 
-/** The practices as a game: a real-command terminal driving a 3D lab, with guided missions. */
+/** The lab selector: the two 2026 labs (watch, play, map) first, then the free-play missions of practices 1 and 2. */
 export function LabSim() {
+  const [pick, setPick] = React.useState<string>(LABS[0].id);
+  const def = LABS.find((l) => l.id === pick);
+  const all: [string, string, boolean][] = [...LABS.map((l) => [l.id, l.title, true] as [string, string, boolean]), ...MISSIONS.map((m) => [m.id, m.title, false] as [string, string, boolean])];
+  return (
+    <div className="sim">
+      <div className="labsel" role="tablist" aria-label="Laboratorio">
+        {all.map(([id, title, fresh]) => (
+          <button key={id} type="button" role="tab" aria-selected={pick === id} data-new={fresh ? "" : undefined} onClick={() => setPick(id)}>
+            {title}
+          </button>
+        ))}
+      </div>
+      {def ? <Lab3D key={def.id} def={def} /> : <Classic mission={pick} />}
+    </div>
+  );
+}
+
+/** Practices 1 and 2 as a game: a real-command terminal driving a 3D lab, with guided missions. */
+function Classic({ mission }: { mission: string }) {
   const stage = React.useRef<HTMLDivElement>(null);
   const world = React.useRef<World | null>(null);
   const lab = React.useRef<Lab>(newLab());
@@ -44,7 +65,6 @@ export function LabSim() {
   const [rows, setRows] = React.useState<Row[]>(INTRO);
   const [input, setInput] = React.useState("");
   const [busy, setBusy] = React.useState(false);
-  const [mission, setMission] = React.useState("p1");
   const [picked, setPicked] = React.useState<string | null>(null);
   const [armed, setArmed] = React.useState(false);
   const [state3d, setState3d] = React.useState<"idle" | "loading" | "on" | "fail">("idle");
@@ -57,6 +77,7 @@ export function LabSim() {
   const alive = React.useRef(true);
   const doneBefore = React.useRef<Set<string>>(new Set());
   const rowsReady = React.useRef(false);
+  React.useEffect(() => setHint(false), [mission]);
 
   const sync = React.useCallback(() => {
     refresh(lab.current, performance.now());
@@ -232,7 +253,7 @@ export function LabSim() {
   } else if (f.k === "monitor") keys.push(["Ctrl+A c (volver)", "^Ac"]);
 
   return (
-    <div className="sim reveal">
+    <div className="sim">
       <div className="sim-stage" ref={stage} data-state={state3d}>
         <div className="sim-hud">
           <span className="sim-where" data-k={f.k}>
@@ -295,25 +316,9 @@ export function LabSim() {
         </div>
 
         <aside className="sim-missions">
-          <div className="sim-tabs" role="tablist">
-            {MISSIONS.map((x) => {
-              const n = x.steps.filter((s) => s.done(L)).length;
-              return (
-                <button
-                  key={x.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={x.id === mission}
-                  onClick={() => {
-                    setMission(x.id);
-                    setHint(false);
-                  }}
-                >
-                  {x.title} <span>{n}/{x.steps.length}</span>
-                </button>
-              );
-            })}
-          </div>
+          <p className="sim-mtitle">
+            {m.title} <span>{status.filter(Boolean).length}/{m.steps.length}</span>
+          </p>
           <div className="sim-bar" aria-hidden="true">
             <i style={{ width: `${(status.filter(Boolean).length / status.length) * 100}%` }} />
           </div>

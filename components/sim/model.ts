@@ -3,13 +3,38 @@
 
 export type Kind = "pc" | "server" | "vm" | "monitor";
 export type Via = "stdio" | "telnet" | "ssh" | "none";
+/** A terminal window: the two labs run one per KVM, side by side, plus your PC. */
+export type Term = "pc" | "kvm1" | "kvm2";
 export interface Frame {
   k: Kind;
   ip?: string;
   pid?: number;
   via?: Via;
+  to?: string; // ssh into a VM: the address you dialled (what exit prints)
   saved?: string; // the server's working directory before this SSH session
+  wait?: boolean; // telnet queued behind another window: frozen
+  held?: string[]; // what was typed while queued
+  esc?: boolean; // Ctrl+] pressed: at the telnet> prompt
+  login?: 0 | 1 | 2; // serial console: 0 blank (press Enter), 1 login:, 2 Password:
+  user?: string;
+  ask?: Ask; // setup-interfaces dialog
+  edit?: { path: string; buf: string[]; dirty: boolean }; // vi
 }
+export interface Ask {
+  q: "pick" | "ip" | "mask" | "gw" | "manual";
+  cur?: string;
+  addr?: string;
+  mask?: string;
+  cfg: Record<string, Iface>; // answers so far
+  old: Record<string, Iface>; // the file before (its values are the defaults offered)
+}
+export type Iface = { type: "dhcp" } | { type: "none" } | { type: "static"; addr: string; mask: string; gw?: string };
+/** What an Alpine guest keeps on its disk: /etc/network/interfaces and, in the DHCP image, /etc/dhcp/dhcpd.conf. */
+export interface Net {
+  ifs: Record<string, Iface>;
+  conf?: string[];
+}
+export type Svc = "started" | "stopped" | "failed";
 export type Role = "plain" | "web" | "dhcp";
 export type Tone = "err" | "ok" | "dim" | "info" | "warn";
 /** One terminal line. d: delay in ms from the command; act: a button that runs a command. */
@@ -18,6 +43,7 @@ export interface Line {
   c?: Tone;
   d?: number;
   act?: { label: string; cmd: string };
+  soft?: boolean; // red, but a result (a service that fails, a lost ping), not a rejected command
 }
 export interface Snap {
   name: string;
@@ -38,6 +64,7 @@ export interface Img {
   role: Role;
   ro: boolean;
   stale?: boolean; // its base changed under it
+  net?: Net; // guest config written on this layer (copy-on-write: read the first one up the chain)
 }
 export interface Fwd {
   host: number;
@@ -75,12 +102,27 @@ export interface Vm {
   fwdOn: boolean;
   routes: { net: string; via: string }[];
   oneTty: boolean;
+  logged?: boolean; // someone logged in on its serial console (it stays logged in after Ctrl+])
+  svc: Record<string, Svc>; // OpenRC services inside (dhcpd in the DHCP image)
+  serves?: Sub; // the subnet the running dhcpd loaded
+  log: string[]; // /var/log/messages
+  leases: Record<string, string>; // dhcpd: MAC -> IP
 }
 export interface Bridge {
   con: string;
   method: "manual" | "auto" | "disabled";
   ip?: string;
   slave?: string;
+  uuid?: string;
+}
+/** A VXLAN connection: frames of bridge `master` travel in UDP 8472 to `remote` with this VNI. */
+export interface Vx {
+  con: string;
+  id: number;
+  remote: string;
+  master?: string; // con-name or ifname of a bridge
+  uuid: string;
+  dup?: boolean; // same id as another vxlan of this host: the kernel refuses it (never active)
 }
 export interface Host {
   ip: string;
@@ -91,22 +133,56 @@ export interface Host {
   vms: Vm[];
   bridges: Map<string, Bridge>;
   allow: Set<string>;
-  open: Set<number>;
-  perm: Set<number>;
+  open: Set<number>; // tcp ports open now
+  perm: Set<number>; // tcp ports saved with --permanent
+  udp: Set<number>; // udp ports open now (8472 = VXLAN)
+  permUdp: Set<number>;
+  vx: Map<string, Vx>; // by ifname
   jobs: number[];
   cwd: string;
   alias: boolean;
   dead: boolean;
   cut: boolean;
   warned: boolean;
-  dhcpLog: string[];
 }
+/*
+ * Effects for the 3D scene (scene.play). Node ids used in paths and ids:
+ *   pc · vpn · repo · srv:IP (the tower's ens32) · br:IP:BRIDGE · vx:IP:IFNAME (a VXLAN end) · gate:IP (the 8472/udp
+ *   firewall gate) · fw:IP:PORT (a tcp port) · vm:PID · nat:PID (its user network) · disk:IP:PATH.
+ *   A frame crossing a tunnel shows up in a path as … br:A:x, vx:A:if, srv:A, gate:B, vx:B:if, br:B:y …
+ * packet  a frame travelling along `path`.
+ * boot/gone/flash  a piece appears / disappears / blinks (ids as above).
+ * boom    a server goes down (poweroff on the host, ens32 inside a bridge).
+ * dora    one DHCP message, in order discover → offer → request → ack. from/to are vm:PID, path goes from→to, ip is
+ *         the address offered; vni is set when it crosses a tunnel; lost: nobody answered (only a discover).
+ * tunnel  a VXLAN link went up or down: ends = its two vx:IP:IFNAME ids.
+ * encap   a frame wrapped in UDP 8472 with that VNI, from host IP to host IP; ok false: it died on the way.
+ * gate    the firewall of `host` for `port` ("8472/udp") was opened/closed, or (blocked) a packet bounced off it.
+ * svc     a service inside a VM changed state (dhcpd: the reception desk light).
+ * queue   a second telnet to a busy console waits in line (on) or got the console / left (off).
+ * edit    vi opened (text = the file) or saved (saved = true, text = new file) a file inside vm.
+ * focus   (replay player only) fly the camera to an id: a node id above, or vm:IP:NAME, tunnel:VNI, overview.
+ */
 export type Fx =
   | { k: "packet"; path: string[]; tone?: "ok" | "err" | "data" | "dhcp" }
   | { k: "boot" | "gone" | "flash"; id: string }
-  | { k: "boom"; ip: string };
+  | { k: "boom"; ip: string }
+  | { k: "dora"; stage: "discover" | "offer" | "request" | "ack"; from: string; to: string; path: string[]; ip: string; vni?: number; lost?: boolean }
+  | { k: "tunnel"; vni: number; ends: string[]; up: boolean }
+  | { k: "encap"; vni: number; from: string; to: string; ok: boolean }
+  | { k: "gate"; host: string; port: string; open: boolean; blocked?: boolean }
+  | { k: "svc"; vm: string; svc: string; state: Svc }
+  | { k: "queue"; host: string; port: number; vm: string; on: boolean }
+  | { k: "edit"; vm: string; file: string; text: string; saved?: boolean }
+  | { k: "focus"; id: string };
 export interface Lab {
-  stack: Frame[];
+  stack: Frame[]; // the active terminal's stack (the same array as stacks[term])
+  stacks: Partial<Record<Term, Frame[]>>;
+  term: Term;
+  real: boolean; // the 2026-11 labs: named guests, login prompts, udhcpc retrying in the background, Ctrl+] then quit
+  t0?: number; // sim time of the first command (log clock)
+  clock: number; // seconds since midnight shown at t0
+  day: string; // log date, e.g. "Nov  4"
   vpn: boolean;
   hosts: Host[];
   nextPid: number;
@@ -133,19 +209,32 @@ function newHost(ip: string, name: string, label: string): Host {
     allow: new Set(["virbr0"]),
     open: new Set(),
     perm: new Set(),
+    udp: new Set(),
+    permUdp: new Set(),
+    vx: new Map(),
     jobs: [],
     cwd: "/root",
     alias: false,
     dead: false,
     cut: false,
     warned: false,
-    dhcpLog: [],
   };
 }
 
 export function newLab(): Lab {
-  return { stack: [{ k: "pc" }], vpn: false, hosts: [newHost("10.0.16.173", "vm-16-173", "KVM1"), newHost("10.0.16.174", "vm-16-174", "KVM2")], nextPid: 4211, seq: 0, done: new Set() };
+  const stack: Frame[] = [{ k: "pc" }];
+  return { stack, stacks: { pc: stack }, term: "pc", real: false, clock: 10 * 3600 + 30 * 60, day: "Nov  2", vpn: false, hosts: [newHost("10.0.16.173", "vm-16-173", "KVM1"), newHost("10.0.16.174", "vm-16-174", "KVM2")], nextPid: 4211, seq: 0, done: new Set() };
 }
+
+/** A deep copy (the replay rewinds to it after showing a trap). */
+export const cloneLab = (lab: Lab): Lab => structuredClone(lab);
+
+/** Deterministic, well-formed UUIDs for nmcli. */
+const uuid = (n: number) => {
+  let x = (n * 2654435761) >>> 0;
+  const s = Array.from({ length: 6 }, () => ((x = (Math.imul(x, 1103515245) + 12345) >>> 0) >>> 4).toString(16).padStart(7, "0").slice(-6)).join("");
+  return `${s.slice(0, 8)}-${s.slice(8, 12)}-4${s.slice(13, 16)}-9${s.slice(17, 20)}-${s.slice(20, 32)}`;
+};
 
 /* ------------------------------------------------------------------ paths and images */
 
@@ -200,7 +289,10 @@ const mib = (s: string) => {
 
 /* ------------------------------------------------------------------ lab helpers */
 
-export const top = (lab: Lab) => lab.stack[lab.stack.length - 1];
+export const top = (lab: Lab, term?: Term) => {
+  const s = (term && lab.stacks[term]) || lab.stack;
+  return s[s.length - 1];
+};
 export const hostOf = (lab: Lab, ip?: string) => lab.hosts.find((h) => h.ip === ip);
 const findHost = (lab: Lab, s: string) => lab.hosts.find((h) => [h.ip, h.name, `${h.name}.ho.ac.uma.es`, h.label.toLowerCase()].includes(s.toLowerCase()));
 export const vmOf = (lab: Lab, pid?: number) => {
@@ -213,52 +305,277 @@ export const vmOf = (lab: Lab, pid?: number) => {
 export const vmName = (h: Host, v: Vm) => v.name ?? baseName(v.disk).replace(/\.qcow2$/, "");
 export const isUp = (v: Vm, now: number) => !v.stopped && now >= v.upAt;
 
-/** Bring every VM up to date (DHCP leases once booted): call it before drawing or checking missions. */
-export function refresh(lab: Lab, now: number) {
-  for (const h of lab.hosts) for (const v of h.vms) ips(lab, h, v, now);
+/** The guest's hostname: the course images say who they are (alpine-dhcp, alpine-base); the P1/P2 sims keep localhost. */
+export const vmHostname = (lab: Lab, v: Vm) => (lab.real ? (v.role === "dhcp" ? "alpine-dhcp" : "alpine-base") : "localhost");
+
+/** Bring every VM up to date (static IPs, dhcpd at boot, DHCP leases, udhcpc retrying): call it before drawing or checking. Returns what happened meanwhile (DORA). */
+export function refresh(lab: Lab, now: number): Fx[] {
+  const fx: Fx[] = [];
+  for (const h of lab.hosts) for (const v of h.vms) ips(lab, h, v, now, fx);
+  return fx;
 }
 
-export function prompt(lab: Lab): string {
-  const f = top(lab);
+/** The prompt of a terminal (the active one by default). "Password:" means: mask the input. */
+export function prompt(lab: Lab, term?: Term): string {
+  const f = top(lab, term);
   if (f.k === "pc") return "PS C:\\Users\\alumno>";
   if (f.k === "monitor") return "(qemu)";
   const h = hostOf(lab, f.ip)!;
   if (f.k === "server") return `[root@${h.name} ${h.cwd === "/root" ? "~" : baseName(h.cwd) || "/"}]#`;
+  if (f.esc) return "telnet>";
+  if (f.wait || f.edit || f.login === 0) return "";
+  const hit = vmOf(lab, f.pid);
+  const hn = hit ? vmHostname(lab, hit.v) : "localhost";
+  if (f.login === 1) return `${hn} login:`;
+  if (f.login === 2) return "Password:";
+  if (f.ask && hit) return askText(hit.v, f.ask);
   if (lab.menu?.pid === f.pid) return "boot:";
   if (f.via === "none") return "";
-  return "localhost:~#";
+  return `${hn}:~#`;
 }
 
-/** IPs of a VM's NICs; leases a bridge NIC from a DHCP VM the first time it is asked after booting. */
-export function ips(lab: Lab, h: Host, v: Vm, now: number) {
+/** The file open in vi in that terminal (for the editor modal). */
+export const editing = (lab: Lab, term?: Term) => {
+  const e = top(lab, term).edit;
+  return e ? { path: e.path, text: e.buf.join("\n") } : undefined;
+};
+
+/** Serial consoles in use: who holds each one and who waits in line (the scene's telefonillo cables). */
+export const consoles = (lab: Lab) =>
+  (Object.entries(lab.stacks) as [Term, Frame[]][]).flatMap(([term, s]) => s.filter((f) => f.k === "vm" && f.via === "telnet").map((f) => ({ term, host: f.ip!, port: vmOf(lab, f.pid)?.v.telnet ?? 0, vm: `vm:${f.pid}`, waiting: !!f.wait })));
+
+/** Bridge NICs whose udhcpc keeps asking with nobody answering (2026 labs): the scene can pulse DISCOVERs from them. */
+export const asking = (lab: Lab, now: number) =>
+  lab.real ? lab.hosts.flatMap((h) => h.vms.filter((v) => v.role !== "dhcp" && isUp(v, now)).flatMap((v) => v.nics.flatMap((n, i) => (n.kind === "bridge" && !n.ip && netOf(h, v).ifs[`eth${i}`]?.type === "dhcp" ? [{ host: h.ip, vm: `vm:${v.pid}`, br: n.br! }] : [])))) : [];
+
+/* ------------------------------------------------------------------ guest config: interfaces and dhcpd.conf */
+
+export const FACTORY_CONF = ["# dhcpd.conf", "#", "# Sample configuration file for ISC dhcpd", "#", "default-lease-time 600;", "max-lease-time 7200;", "", "subnet 10.0.0.0 netmask 255.255.255.0 {", "  range 10.0.0.100 10.0.0.200;", "  option routers 10.0.0.254;", "}"];
+/** dhcpd.conf with one /24 subnet: the factory file after editing it. */
+export const dhcpdConf = (net: string, from: string, to: string, routers?: string) => [...FACTORY_CONF.slice(0, 7), `subnet ${net} netmask 255.255.255.0 {`, `  range ${from} ${to};`, ...(routers ? [`  option routers ${routers};`] : []), "}"].join("\n");
+
+/** The guest config as the VM sees it: the first layer up its disk chain that has one, else the image's factory one. */
+export function netOf(h: Host, v: Vm): Net {
+  for (const img of chain(h, v.disk).list) if (img.net) return img.net;
+  return v.role === "dhcp" ? { ifs: { eth0: { type: "static", addr: "10.0.0.253", mask: "255.255.255.0", gw: "10.0.0.254" } }, conf: FACTORY_CONF } : { ifs: { eth0: { type: "dhcp" } } };
+}
+const setNet = (h: Host, v: Vm, net: Net) => {
+  const img = chain(h, v.disk).list[0];
+  if (img) img.net = net;
+};
+
+const n32 = (ip: string) => ip.split(".").reduce((s, x) => s * 256 + +x, 0);
+const ipOf = (n: number) => [24, 16, 8, 0].map((b) => Math.floor(n / 2 ** b) % 256).join(".");
+const isIp = (s?: string) => !!s && /^\d{1,3}(\.\d{1,3}){3}$/.test(s) && s.split(".").every((x) => +x < 256);
+const inNet = (ip: string, net: string, mask: string) => isIp(ip) && isIp(net) && isIp(mask) && ((n32(ip) & n32(mask)) >>> 0) === ((n32(net) & n32(mask)) >>> 0);
+
+export interface Sub {
+  net: string;
+  mask: string;
+  from?: string;
+  to?: string;
+  routers?: string;
+}
+/** dhcpd.conf the way dhcpd reads it (enough of it): subnets, ranges, routers and the classic errors. */
+export function parseConf(lines: string[]): { subs: Sub[]; err?: string[] } {
+  const subs: Sub[] = [];
+  let cur: Sub | undefined;
+  const body = lines.map((l, i) => ({ t: l.replace(/#.*/, "").trim(), n: i + 1, raw: l })).filter((x) => x.t);
+  const bad = (at: { n: number; raw: string }, msg: string) => ({ subs, err: [`/etc/dhcp/dhcpd.conf line ${at.n}: ${msg}`, at.raw, "Configuration file errors encountered -- exiting"] });
+  for (let i = 0; i < body.length; i++) {
+    const { t } = body[i];
+    const next = body[i + 1] ?? body[i];
+    if (t === "}") {
+      if (!cur) return bad(body[i], "expecting a declaration.");
+      cur = undefined;
+      continue;
+    }
+    const sub = /^subnet\s+(\S+)\s+netmask\s+(\S+)\s*\{$/.exec(t);
+    if (sub) {
+      if (!isIp(sub[1]) || !isIp(sub[2])) return bad(body[i], "expecting IP address or hostname.");
+      subs.push((cur = { net: sub[1], mask: sub[2] }));
+      continue;
+    }
+    if (!t.endsWith(";")) return bad(next, "semicolon expected.");
+    const s = t.slice(0, -1).trim();
+    const r = /^range\s+(\S+)\s+(\S+)$/.exec(s);
+    if (r && cur) {
+      if (!inNet(r[1], cur.net, cur.mask) || !inNet(r[2], cur.net, cur.mask)) return { subs, err: [`Address range ${r[1]} to ${r[2]} not on net ${cur.net}/${cur.mask}!`, "Configuration file errors encountered -- exiting"] };
+      cur.from = r[1];
+      cur.to = r[2];
+    }
+    const o = /^option\s+routers\s+(\S+)$/.exec(s);
+    if (o && cur) cur.routers = o[1];
+  }
+  if (cur) return bad({ n: lines.length + 1, raw: "" }, "unexpected end of file");
+  return { subs };
+}
+
+/** The subnet a DHCP VM is serving right now (what its running dhcpd loaded), if any. */
+export const serving = (v: Vm) => (v.role === "dhcp" && v.svc.dhcpd === "started" ? v.serves : undefined);
+
+const clock = (lab: Lab, now: number) => {
+  const s = Math.floor(lab.clock + Math.max(0, now - (lab.t0 ?? now)) / 1000) % 86400;
+  return [s / 3600, (s / 60) % 60, s % 60].map((x) => String(Math.floor(x)).padStart(2, "0")).join(":");
+};
+/** wget's "2026-11-04 16:41:23" (every lab day is in November 2026). */
+const stamp = (lab: Lab, now: number) => `2026-11-${lab.day.trim().split(/\s+/)[1].padStart(2, "0")} ${clock(lab, now)}`;
+/** A line in the guest's /var/log/messages. */
+function syslog(lab: Lab, v: Vm, now: number, lvl: "info" | "err", ...msgs: string[]) {
+  for (const m of msgs) v.log.push(`${lab.day} ${clock(lab, now)} ${vmHostname(lab, v)} daemon.${lvl} dhcpd[${2400 + (v.pid % 97)}]: ${m}`);
+}
+
+/** (Re)start dhcpd inside a DHCP VM: it serves the subnet that contains its own eth0 IP, or exits. */
+function startDhcpd(lab: Lab, h: Host, v: Vm, now: number, fx?: Fx[]) {
+  const ip = v.nics[0]?.ip;
+  const p = parseConf(netOf(h, v).conf ?? []);
+  const sub = !p.err && ip ? p.subs.find((s) => s.from && inNet(ip, s.net, s.mask)) : undefined;
+  const err = p.err ?? (sub ? [] : [`No subnet declaration for eth0 (${ip ?? "0.0.0.0"}).`, "** Ignoring requests on eth0.  If this is not what", "   you want, please write a subnet declaration", "   in your dhcpd.conf file for the network segment", "   to which interface eth0 is attached. **", "Not configured to listen on any interfaces!", "exiting."]);
+  const was = v.svc.dhcpd;
+  v.svc.dhcpd = sub ? "started" : "failed";
+  v.serves = sub;
+  syslog(lab, v, now, "info", "Internet Systems Consortium DHCP Server 4.4.2-P1");
+  if (sub) syslog(lab, v, now, "info", `Listening on LPF/eth0/${v.nics[0].mac.toLowerCase()}/${sub.net}/24`, "Server starting service.");
+  else syslog(lab, v, now, "err", ...err.filter(Boolean));
+  if (sub && was && was !== "started") lab.done.add("dhcpd-back");
+  fx?.push({ k: "svc", vm: `vm:${v.pid}`, svc: "dhcpd", state: v.svc.dhcpd });
+  return err;
+}
+
+/** IPs of a VM's NICs as its /etc/network/interfaces brings them up: static, or by DHCP (in the 2026 labs udhcpc -b keeps retrying in the background). */
+export function ips(lab: Lab, h: Host, v: Vm, now: number, fx: Fx[] = []) {
+  if (!isUp(v, now)) return v.nics.map((n) => n.ip);
+  const cfg = netOf(h, v).ifs;
   v.nics.forEach((n, i) => {
-    if (n.ip || !isUp(v, now)) return;
-    if (n.kind === "user") n.ip = "10.0.2.15";
-    else if (v.role === "dhcp" && i === 0) n.ip = "10.0.0.253";
+    if (n.ip) return;
+    if (n.kind === "user") return void (n.ip = "10.0.2.15");
+    const c = cfg[`eth${i}`];
+    if (c?.type === "static") return void (n.ip = c.addr);
+    if (c?.type !== "dhcp" || !n.br) return;
+    if (lab.real) lease(lab, h, v, n, now, fx);
     else if (!n.tried) {
       n.tried = true;
-      const srv = dhcpOn(h, n.br, v.upAt - 600);
-      if (srv) give(h, n, srv);
+      lease(lab, h, v, n, now, fx, v.upAt - 600);
     }
   });
+  if (v.role === "dhcp" && !v.svc.dhcpd) startDhcpd(lab, h, v, now, fx);
   return v.nics.map((n) => n.ip);
 }
-const dhcpOn = (h: Host, br: string | undefined, at: number) => h.vms.find((x) => x.role === "dhcp" && x.nics[0]?.kind === "bridge" && x.nics[0].br === br && !x.stopped && x.upAt <= at);
-function give(h: Host, n: Nic, srv: Vm) {
-  const used = new Set(h.vms.flatMap((x) => x.nics.map((y) => y.ip)));
-  let k = 100;
-  while (used.has(`10.0.0.${k}`)) k++;
-  n.ip = `10.0.0.${k}`;
-  const mac = n.mac.toLowerCase();
-  h.dhcpLog.push(`dhcpd: DHCPDISCOVER from ${mac} via eth0`, `dhcpd: DHCPOFFER on ${n.ip} to ${mac} via eth0`, `dhcpd: DHCPREQUEST for ${n.ip} (10.0.0.253) from ${mac} via eth0`, `dhcpd: DHCPACK on ${n.ip} to ${mac} via eth0`);
-  void srv;
+
+/* ------------------------------------------------------------------ VXLAN: links and LANs */
+
+export interface End {
+  ip: string; // host
+  ifname: string;
+  br?: string; // the bridge it hangs from (undefined: master missing, or a duplicate id)
 }
+export interface Link {
+  vni: number;
+  a: End;
+  b?: End; // the matching end on the other host
+  up: boolean;
+  why?: "remote" | "peer" | "id" | "master" | "down" | "fw";
+}
+const brOf = (h: Host, x: Vx) => (x.dup ? undefined : [...h.bridges].find(([name, b]) => name === x.master || b.con === x.master)?.[0]);
+
+/** Every VXLAN of the lab, paired end to end. Up when both ends point at each other's ens32 IP with the same id, hang from a bridge, and both firewalls let 8472/udp in. */
+export function links(lab: Lab): Link[] {
+  const ends = lab.hosts.flatMap((h) => [...h.vx].map(([ifname, x]) => ({ h, x, e: { ip: h.ip, ifname, br: brOf(h, x) } as End })));
+  const used = new Set<object>();
+  const out: Link[] = [];
+  for (const a of ends) {
+    if (used.has(a)) continue;
+    used.add(a);
+    const b = ends.find((o) => !used.has(o) && !o.x.dup && o.h.ip === a.x.remote && o.x.remote === a.h.ip && o.x.id === a.x.id);
+    if (b) used.add(b);
+    const why = !b ? (a.x.dup ? "id" : hostOf(lab, a.x.remote) ? "peer" : "remote") : !a.e.br || !b.e.br ? "master" : a.h.dead || a.h.cut || b.h.dead || b.h.cut ? "down" : !a.h.udp.has(8472) || !b.h.udp.has(8472) ? "fw" : undefined;
+    out.push({ vni: a.x.id, a: a.e, b: b?.e, up: !why, why });
+  }
+  return out;
+}
+
+/** LAN id of a host bridge: bridges joined by an up VXLAN share it. */
+function lanKey(lab: Lab) {
+  const up = new Map<string, string>();
+  const find = (k: string): string => {
+    const p = up.get(k);
+    return p && p !== k ? find(p) : k;
+  };
+  for (const l of links(lab))
+    if (l.up && l.b) {
+      const [x, y] = [find(`${l.a.ip}|${l.a.br}`), find(`${l.b.ip}|${l.b.br}`)].sort();
+      if (x !== y) up.set(y, x);
+    }
+  return (ip: string, br: string) => find(`${ip}|${br}`);
+}
+export const segOf = (lab: Lab, ip: string, br: string) => lanKey(lab)(ip, br);
+
+/** Every bridge NIC on the same LAN as bridge `br` of host h (across the overlay). */
+function lanOf(lab: Lab, h: Host, br: string) {
+  const key = lanKey(lab);
+  const me = key(h.ip, br);
+  return lab.hosts.flatMap((x) => x.vms.flatMap((v) => v.nics.map((n, i) => ({ h: x, v, n, i })))).filter((o) => o.n.kind === "bridge" && key(o.h.ip, o.n.br!) === me);
+}
+
+/** Node ids from one bridge to another of the same LAN, through the tunnel if they are on different hosts. */
+function hops(lab: Lab, ha: Host, bra: string, hb: Host, brb: string): { path: string[]; vni?: number } {
+  if (ha === hb) return { path: [`br:${ha.ip}:${bra}`] };
+  const l = links(lab).find((x) => x.up && x.b && [x.a, x.b].some((e) => e.ip === ha.ip && e.br === bra) && [x.a, x.b].some((e) => e.ip === hb.ip && e.br === brb));
+  if (!l?.b) return { path: [`br:${ha.ip}:${bra}`, `br:${hb.ip}:${brb}`] };
+  const [p, q] = l.a.ip === ha.ip ? [l.a, l.b] : [l.b, l.a];
+  return { path: [`br:${ha.ip}:${bra}`, `vx:${p.ip}:${p.ifname}`, `srv:${p.ip}`, `gate:${q.ip}`, `vx:${q.ip}:${q.ifname}`, `br:${hb.ip}:${brb}`], vni: l.vni };
+}
+
+/** A frame trying to leave (h, br) through a broken tunnel: it bounces off a closed gate or dies on the way. */
+function bounce(lab: Lab, h: Host, br: string, fx: Fx[]) {
+  for (const l of links(lab)) {
+    const mine = [l.a, l.b].find((e) => e?.ip === h.ip && e.br === br);
+    if (l.up || !mine) continue;
+    const far = hostOf(lab, h.vx.get(mine.ifname)!.remote);
+    const shut = far && !far.udp.has(8472) ? far : l.b && !h.udp.has(8472) ? h : undefined;
+    fx.push({ k: "encap", vni: l.vni, from: h.ip, to: far?.ip ?? h.vx.get(mine.ifname)!.remote, ok: false });
+    if (shut) fx.push({ k: "gate", host: shut.ip, port: "8472/udp", open: false, blocked: true });
+    fx.push({ k: "packet", path: [`br:${h.ip}:${br}`, `vx:${h.ip}:${mine.ifname}`, `srv:${h.ip}`, ...(far ? [`gate:${far.ip}`] : [])], tone: "err" });
+  }
+}
+
+/** udhcpc on NIC n: DORA with the first DHCP server serving its LAN (any host of the overlay). */
+function lease(lab: Lab, h: Host, v: Vm, n: Nic, now: number, fx: Fx[], at = now): boolean {
+  for (const s of lanOf(lab, h, n.br!)) {
+    if (s.v === v || s.v.role !== "dhcp" || s.i !== 0 || s.v.upAt > at || !isUp(s.v, now)) continue;
+    ips(lab, s.h, s.v, now);
+    const sub = serving(s.v);
+    if (!sub?.from || !sub.to) continue;
+    const mac = n.mac.toLowerCase();
+    let ip = s.v.leases[mac];
+    if (!ip) {
+      const used = new Set([...Object.values(s.v.leases), ...lab.hosts.flatMap((x) => x.vms.flatMap((y) => y.nics.map((z) => z.ip)))]);
+      for (let k = n32(sub.from); k <= n32(sub.to) && !ip; k++) if (!used.has(ipOf(k))) ip = ipOf(k);
+      if (!ip) continue;
+      s.v.leases[mac] = ip;
+    }
+    n.ip = ip;
+    const who = lab.real ? " (test)" : "";
+    syslog(lab, s.v, now, "info", `DHCPDISCOVER from ${mac}${who} via eth0`, `DHCPOFFER on ${ip} to ${mac}${who} via eth0`, `DHCPREQUEST for ${ip} (${s.v.nics[0].ip}) from ${mac}${who} via eth0`, `DHCPACK on ${ip} to ${mac}${who} via eth0`);
+    const { path, vni } = hops(lab, h, n.br!, s.h, s.n.br!);
+    const go = [`vm:${v.pid}`, ...path, `vm:${s.v.pid}`];
+    const back = [...go].reverse();
+    (["discover", "offer", "request", "ack"] as const).forEach((stage, k) => fx.push({ k: "dora", stage, from: k % 2 ? go[go.length - 1] : go[0], to: k % 2 ? go[0] : go[go.length - 1], path: k % 2 ? back : go, ip, vni }));
+    if (vni !== undefined) fx.push({ k: "encap", vni, from: h.ip, to: s.h.ip, ok: true });
+    lab.done.add("dora");
+    if (s.h !== h) lab.done.add("dora-tunnel");
+    if (lab.real && sub.net === "10.0.0.0") lab.done.add("trap:factory"); // the DHCP still on its factory range
+    return true;
+  }
+  return false;
+}
+
 const sameNet = (a?: string, b?: string) => !!a && !!b && a.split(".").slice(0, 3).join(".") === b.split(".").slice(0, 3).join(".");
 const bridgeIp = (h: Host, br?: string) => {
   const b = br ? h.bridges.get(br) : undefined;
   if (!b) return undefined;
   if (b.method === "manual") return b.ip?.split("/")[0];
-  if (b.method === "auto") return dhcpOn(h, br, Infinity) ? (b.ip ??= "10.0.0.150/24").split("/")[0] : undefined;
+  if (b.method === "auto") return h.vms.some((x) => x.nics[0]?.br === br && serving(x)) ? (b.ip ??= "10.0.0.150/24").split("/")[0] : undefined;
   return undefined;
 };
 
@@ -391,28 +708,120 @@ interface Ctx {
   now: number;
   ok: boolean;
 }
-const say = (c: Ctx, t: string, tone?: Tone, d?: number) => c.out.push({ t, c: tone, d });
+const say = (c: Ctx, t: string, tone?: Tone, d?: number) => void c.out.push({ t, c: tone, d });
 const fail = (c: Ctx, t: string) => {
   say(c, t, "err");
   c.ok = false;
 };
 const tip = (c: Ctx, t: string) => say(c, `ℹ ${t}`, "info");
+/** A red line that is a result, not a mistake of whoever typed (the 3D lab does not count it as an error). */
+const soft = (c: Ctx, t: string, d?: number) => {
+  c.out.push({ t, c: "err", d, soft: true });
+  c.ok = false;
+};
 
-/** Run what the user typed (one or more lines). Mutates the lab. */
-export function exec(lab: Lab, input: string, now: number): { out: Line[]; fx: Fx[] } {
-  const c: Ctx = { lab, out: [], fx: [], now, ok: true };
+/** Run what the user typed (one or more lines) in a terminal (the active one by default). Mutates the lab. */
+export function exec(lab: Lab, input: string, now: number, term?: Term): { out: Line[]; fx: Fx[] } {
+  if (term && lab.stacks[term]) {
+    lab.term = term;
+    lab.stack = lab.stacks[term]!;
+  }
+  lab.t0 ??= now;
+  const c: Ctx = { lab, out: [], fx: refresh(lab, now), now, ok: true };
+  const before = upLinks(lab);
+  feed(c, input);
+  after(c, before);
+  return { out: c.out, fx: c.fx };
+}
+
+function feed(c: Ctx, input: string): void {
   const key = keyOf(input.trim());
-  if (key) {
-    special(c, key);
-    return { out: c.out, fx: c.fx };
+  if (key) return special(c, key);
+  const f = top(c.lab);
+  if (f.esc) return telnetCmd(c, f, input);
+  if (f.wait) return void (f.held ??= []).push(input);
+  if (f.held?.length) {
+    // the console is ours now: everything typed while waiting arrives at once
+    const held = f.held;
+    f.held = undefined;
+    say(c, `(la consola quedó libre: le llega de golpe lo que tecleaste mientras esperabas: ${held.length} línea${held.length === 1 ? "" : "s"})`, "warn");
+    for (const x of [...held, input]) feed(c, x);
+    return;
   }
-  if (lab.menu) {
-    menuInput(c, input);
-    return { out: c.out, fx: c.fx };
-  }
+  if (f.login !== undefined) return login(c, f, input);
+  if (f.ask) return answer(c, f, input);
+  if (f.edit) return editor(c, f, input);
+  if (c.lab.menu) return menuInput(c, input);
   const lines = joinLoops(input.replace(/\\\r?\n/g, " ").split(/\r?\n/));
   for (const l of lines) runLine(c, l);
-  return { out: c.out, fx: c.fx };
+}
+
+const upLinks = (lab: Lab) => new Map(links(lab).flatMap((l) => (l.up && l.b ? [[[`${l.a.ip}:${l.a.ifname}`, `${l.b.ip}:${l.b.ifname}`].sort().join("|"), l] as const] : [])));
+
+/** After every command: tunnels that went up or down, and consoles freed for the next window in line. */
+function after(c: Ctx, before: Map<string, Link>) {
+  const now = upLinks(c.lab);
+  const ends = (l: Link) => [`vx:${l.a.ip}:${l.a.ifname}`, `vx:${l.b!.ip}:${l.b!.ifname}`];
+  for (const [k, l] of now)
+    if (!before.has(k)) {
+      c.fx.push({ k: "tunnel", vni: l.vni, ends: ends(l), up: true });
+      c.lab.done.add(`tunnel:${l.vni}`);
+    }
+  for (const [k, l] of before) if (!now.has(k)) c.fx.push({ k: "tunnel", vni: l.vni, ends: ends(l), up: false });
+  for (const h of c.lab.hosts)
+    for (const v of h.vms) {
+      const on = Object.values(c.lab.stacks).flatMap((s) => s!.filter((f) => f.k === "vm" && f.pid === v.pid && f.via === "telnet"));
+      const next = on.find((f) => f.wait);
+      if (!next || on.some((f) => !f.wait)) continue;
+      next.wait = false;
+      next.login = c.lab.real ? 0 : undefined;
+      c.fx.push({ k: "queue", host: h.ip, port: v.telnet ?? 0, vm: `vm:${v.pid}`, on: false });
+    }
+}
+
+/** At the telnet> prompt (after Ctrl+]). */
+function telnetCmd(c: Ctx, f: Frame, input: string) {
+  const t = input.trim();
+  if (!t) return void (f.esc = false);
+  if (/^(q|quit|c|close)$/.test(t)) {
+    say(c, "Connection closed.");
+    if (f.wait) c.fx.push({ k: "queue", host: f.ip!, port: vmOf(c.lab, f.pid)?.v.telnet ?? 0, vm: `vm:${f.pid}`, on: false });
+    c.lab.stack.pop();
+    return;
+  }
+  say(c, t === "?" || t === "help" ? "close\tclose current connection\nquit\texit telnet\n(Intro: volver a la consola)" : "?Invalid command");
+}
+
+/** The serial console's getty: nothing until Enter, then login and password (any password: it is a simulation). */
+function login(c: Ctx, f: Frame, input: string): void {
+  const hit = vmOf(c.lab, f.pid);
+  if (!hit) return;
+  const { v } = hit;
+  const t = input.trim();
+  if (f.login === 0) {
+    if (!isUp(v, c.now)) return say(c, "(la MV todavía está arrancando…)", "dim");
+    if (v.logged) {
+      f.login = undefined;
+      return t ? feed(c, input) : undefined;
+    }
+    say(c, "\nWelcome to Alpine Linux 3.13\nKernel 5.10.43-0-virt on an x86_64 (/dev/ttyS0)\n");
+    f.login = 1;
+    if (!t) return;
+  }
+  if (f.login === 1) {
+    if (!t) return;
+    f.user = t;
+    f.login = 2;
+    return;
+  }
+  if (f.user !== "root") {
+    say(c, "\nLogin incorrect", "err");
+    f.login = 1;
+    return;
+  }
+  f.login = undefined;
+  v.logged = true;
+  say(c, "Welcome to Alpine!\n\nYou can setup the system with the command: setup-alpine\n");
 }
 
 const keyOf = (s: string) => {
@@ -513,8 +922,14 @@ function special(c: Ctx, key: string) {
   }
   if (!hit) return;
   const { h, v } = hit;
+  if (f.wait && key !== "]") return; // queued: it goes nowhere yet
+  if (key === "c" && f.ask) {
+    f.ask = undefined;
+    return say(c, "^C");
+  }
   if (key === "]") {
     if (f.via !== "telnet") return tip(c, "Ctrl+] es la tecla de escape de telnet; aquí no estás en telnet.");
+    if (c.lab.real) return void (f.esc = true); // telnet> prompt: then quit
     say(c, "telnet> quit");
     say(c, "Connection closed.");
     c.lab.stack.pop();
@@ -553,14 +968,23 @@ function removeVm(c: Ctx, h: Host, v: Vm) {
   h.jobs = h.jobs.filter((p) => p !== v.pid);
   if (c.lab.menu?.pid === v.pid) c.lab.menu = undefined;
   c.fx.push({ k: "gone", id: `vm:${v.pid}` });
-  const at = c.lab.stack.findIndex((f) => f.pid === v.pid);
-  if (at >= 0) {
-    const via = c.lab.stack[at].via;
-    c.lab.stack.splice(at);
+  for (const s of Object.values(c.lab.stacks)) {
+    const at = s!.findIndex((f) => f.pid === v.pid);
+    if (at < 0) continue;
+    const { via, to } = s![at];
+    s!.splice(at);
+    if (s !== c.lab.stack) continue;
     if (via === "telnet") say(c, "Connection closed by foreign host.");
-    if (via === "ssh") say(c, `Connection to ${ipOfVm(v)} closed by remote host.`);
+    if (via === "ssh") say(c, `Connection to ${to ?? ipOfVm(v)} closed by remote host.`);
   }
 }
+/** Every window inside that host loses its session (the server went down or lost ens32). */
+const dropHost = (lab: Lab, ip: string) => {
+  for (const s of Object.values(lab.stacks)) {
+    const at = s!.findIndex((f) => f.ip === ip);
+    if (at >= 0) s!.splice(at);
+  }
+};
 const ipOfVm = (v: Vm) => v.nics.find((n) => n.ip)?.ip ?? "la MV";
 
 /* ------------------------------------------------------------------ boot */
@@ -582,7 +1006,7 @@ function bootLines(c: Ctx, h: Host, v: Vm, visible: boolean, from = 0): Line[] {
       { t: " * Starting networking ...                              [ ok ]", d: at(2000) },
     );
     if (v.role === "web") L.push({ t: " * Starting lighttpd ...                                [ ok ]", d: at(2400) });
-    if (v.role === "dhcp") L.push({ t: " * Starting dhcpd ...                                   [ ok ]", d: at(2400) });
+    if (v.role === "dhcp") L.push(wouldServe(h, v) ? { t: rc("Starting dhcpd", true), d: at(2400) } : { t: `${rc("Starting dhcpd", false)}\n * ERROR: dhcpd failed to start`, c: "err", d: at(2400), soft: true });
     L.push({ t: " * Starting sshd ...                                    [ ok ]", d: at(2800) });
   } else L.push({ t: "(pantalla negra: el kernel escribe sus mensajes en la pantalla gráfica, que con -nographic no existe)", c: "dim", d: at(700) });
   L.push(
@@ -590,14 +1014,21 @@ function bootLines(c: Ctx, h: Host, v: Vm, visible: boolean, from = 0): Line[] {
     { t: "Welcome to Alpine Linux 3.13", d: at(3300) },
     { t: "Kernel 5.10.43-0-virt on an x86_64 (/dev/ttyS0)", d: at(3300) },
     { t: "", d: at(3300) },
-    { t: "localhost login: root", d: at(3400) },
+    { t: `${vmHostname(c.lab, v)} login: root`, d: at(3400) },
     { t: "Password: ", d: at(3500) },
     { t: "Welcome to Alpine!", d: at(3600) },
   );
-  void c;
-  void h;
   return L;
 }
+/** An OpenRC status line: " * Starting dhcpd ...   [ ok ]". */
+const rc = (what: string, ok: boolean) => ` * ${what} ...`.padEnd(56) + (ok ? "[ ok ]" : "[ !! ]");
+/** Would dhcpd start with this disk's config (static eth0 inside a declared subnet)? */
+const wouldServe = (h: Host, v: Vm) => {
+  const n = netOf(h, v);
+  const e = n.ifs.eth0;
+  const p = parseConf(n.conf ?? []);
+  return !p.err && e?.type === "static" && p.subs.some((s) => s.from && inNet(e.addr, s.net, s.mask));
+};
 const bootMs = (v: Vm) => Math.round(BOOT_MS * (v.kvm ? 1 : 2.6));
 
 function menuInput(c: Ctx, input: string) {
@@ -734,7 +1165,7 @@ function server(c: Ctx, h: Host, cmd: Cmd) {
         }
         h.files.delete(path);
         c.fx.push({ k: "gone", id: `disk:${h.ip}:${path}` });
-        const users = [...h.files.values()].filter((y) => y.backing && real(h, y.backing) === undefined);
+        const users = [...h.files.values()].filter((y) => y.backing === path);
         if (users.length) tip(c, `Has borrado un disco base: ${users.map((u) => baseName(u.path)).join(", ")} ya no arrancan (su backing file no existe).`);
       }
       return;
@@ -844,7 +1275,7 @@ function server(c: Ctx, h: Host, cmd: Cmd) {
     case "ssh":
       return sshFromServer(c, h, a);
     case "ping":
-      return ping(c, { h }, a.filter((x) => !x.startsWith("-") && !/^\d+$/.test(x)).pop() ?? "");
+      return ping(c, { h }, a.filter((x) => !x.startsWith("-") && !/^\d+$/.test(x)).pop() ?? "", count(a));
     case "poweroff":
     case "shutdown":
     case "halt":
@@ -892,7 +1323,7 @@ function ls(c: Ctx, h: Host, a: string[]) {
 const IMAGES: Record<string, { role: Role; clone?: string; used: number }> = {
   "alpine-base.qcow2": { role: "plain", used: BASE_USED },
   "alpine-webserver.qcow2": { role: "web", clone: "alpine-base.qcow2", used: 8320 },
-  "alpine-dhcp.qcow2": { role: "dhcp", used: 318720 },
+  "alpine-dhcp.qcow2": { role: "dhcp", clone: "alpine-base.qcow2", used: 9856 },
 };
 
 function wget(c: Ctx, h: Host, url: string) {
@@ -900,12 +1331,12 @@ function wget(c: Ctx, h: Host, url: string) {
   const [hostPart, ...rest] = u.split("/");
   const path = "/" + rest.join("/");
   if (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(hostPart) || hostPart.startsWith(h.ip)) return web(c, url, "server", h, true);
-  if (hostPart !== REPO) return fail(c, `--2026-11-02 10:15:23--  http://${u}\nResolving ${hostPart} (${hostPart})... failed: Name or service not known.\nwget: unable to resolve host address ‘${hostPart}’`);
+  if (hostPart !== REPO) return fail(c, `--${stamp(c.lab, c.now)}--  http://${u}\nResolving ${hostPart} (${hostPart})... failed: Name or service not known.\nwget: unable to resolve host address ‘${hostPart}’`);
   const file = baseName(path);
   const img = path.startsWith(REPO_PATH) ? IMAGES[file] : undefined;
-  say(c, `--2026-11-02 10:15:23--  http://${REPO}${path}`);
+  say(c, `--${stamp(c.lab, c.now)}--  http://${REPO}${path}`);
   say(c, `Connecting to ${REPO} (${REPO})|:80... connected.`);
-  if (!img) return fail(c, "HTTP request sent, awaiting response... 404 Not Found\n2026-11-02 10:15:23 ERROR 404: Not Found.");
+  if (!img) return fail(c, `HTTP request sent, awaiting response... 404 Not Found\n${stamp(c.lab, c.now)} ERROR 404: Not Found.`);
   let name = file;
   for (let k = 1; h.files.has(`${h.cwd}/${name}`); k++) name = `${file}.${k}`;
   const at = `${h.cwd}/${name}`;
@@ -913,7 +1344,7 @@ function wget(c: Ctx, h: Host, url: string) {
   say(c, `Length: ${img.used * 1024} (${kib(img.used)}) [application/octet-stream]`);
   say(c, `Saving to: ‘${name}’`);
   say(c, `${name.padEnd(24)}100%[===================>] ${kib(img.used).padStart(8)}  94,2MB/s    in 3,1s`, undefined, 900);
-  say(c, `2026-11-02 10:15:26 (94,2 MB/s) - ‘${name}’ saved [${img.used * 1024}/${img.used * 1024}]`, "ok", 1000);
+  say(c, `${stamp(c.lab, c.now + 3000)} (94,2 MB/s) - ‘${name}’ saved [${img.used * 1024}/${img.used * 1024}]`, "ok", 1000);
   if (name !== file) tip(c, `${file} ya existía en esta carpeta: wget no lo pisa y guarda la copia como ${name}.`);
   h.files.set(at, { path: at, kind: img.clone ? "clone" : "base", fmt: "qcow2", backing: img.clone ? `${h.cwd}/${img.clone}` : undefined, bname: img.clone, virt: 8192, used: img.used, snaps: [], role: img.role, ro: false, tty: img.role === "plain" ? undefined : true });
   c.fx.push({ k: "packet", path: ["repo", `srv:${h.ip}`, `disk:${h.ip}:${at}`], tone: "data" });
@@ -956,20 +1387,21 @@ function taps(h: Host) {
 
 function hostIp(c: Ctx, h: Host, a: string[]) {
   const sub = a[0] ?? "";
-  if (/^r/.test(sub)) return say(c, `default via 10.0.16.1 dev ens32 proto static metric 100\n10.0.16.0/24 dev ens32 proto kernel scope link src ${h.ip} metric 100${[...h.bridges].map(([b]) => (bridgeIp(h, b) ? `\n10.0.0.0/24 dev ${b} proto kernel scope link src ${bridgeIp(h, b)}` : "")).join("")}`);
+  if (/^r/.test(sub)) return say(c, `default via 10.0.16.1 dev ens32 proto static metric 100\n10.0.16.0/20 dev ens32 proto kernel scope link src ${h.ip} metric 100${[...h.bridges].map(([b]) => (bridgeIp(h, b) ? `\n10.0.0.0/24 dev ${b} proto kernel scope link src ${bridgeIp(h, b)}` : "")).join("")}`);
   const only = a.includes("show") ? a[a.indexOf("show") + 1] === "dev" ? a[a.indexOf("show") + 2] : a[a.indexOf("show") + 1] : undefined;
   taps(h);
   const rows: [string, string, string?][] = [
     ["lo", "<LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN", "inet 127.0.0.1/8 scope host lo"],
-    ["ens32", "<BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP", `inet ${h.ip}/24 brd 10.0.16.255 scope global noprefixroute ens32`],
+    ["ens32", "<BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP", `inet ${h.ip}/20 brd 10.0.31.255 scope global noprefixroute ens32`],
     ["ens33", `<BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel ${[...h.bridges.values()].some((b) => b.slave === "ens33") ? "master br1 " : ""}state UP`],
     ["virbr0", "<NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN", "inet 192.168.122.1/24 brd 192.168.122.255 scope global virbr0"],
   ];
   for (const [b] of h.bridges) {
-    const members = h.vms.some((v) => v.nics.some((n) => n.br === b));
+    const members = h.vms.some((v) => v.nics.some((n) => n.br === b)) || [...h.vx.values()].some((x) => brOf(h, x) === b);
     const ip = bridgeIp(h, b);
     rows.push([b, members ? "<BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP" : "<NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN", ip ? `inet ${ip}/24 brd 10.0.0.255 scope global noprefixroute ${b}` : undefined]);
   }
+  for (const [i, x] of h.vx) if (brOf(h, x)) rows.push([i, `<BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master ${brOf(h, x)} state UNKNOWN`]);
   for (const v of h.vms) for (const n of v.nics) if (n.tap) rows.push([n.tap, `<BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel master ${n.br} state UNKNOWN`]);
   let k = 1;
   for (const [dev, flags, inet] of rows) {
@@ -990,8 +1422,10 @@ function nmcli(c: Ctx, h: Host, a: string[]) {
   const isDev = obj && "device".startsWith(obj) && obj.length >= 3;
   if (obj === "conection") return fail(c, "Error: argument 'conection' not understood. Try passing --help instead.");
   if (isCon && verb === "add") {
-    const type = opt("type");
-    const ifname = opt("ifname");
+    const p = nmPairs(c, rest);
+    if (!p) return void c.lab.done.add("trap:pares");
+    const type = p["connection.type"];
+    const ifname = p["connection.interface-name"];
     if (type === "bridge-slave" || (type === "ethernet" && opt("master"))) {
       const br = h.bridges.get(opt("master") ?? "");
       if (!br) return fail(c, "Error: master bridge not found.");
@@ -1001,7 +1435,7 @@ function nmcli(c: Ctx, h: Host, a: string[]) {
         say(c, `Connection 'bridge-slave-ens32' successfully added.`);
         fail(c, "client_loop: send disconnect: Connection reset");
         tip(c, "Has metido ens32 en el bridge: es la interfaz por la que entras por SSH y la acabas de perder. En el examen, solo el profesor podría arreglarlo.");
-        c.lab.stack.splice(c.lab.stack.findIndex((f) => f.ip === h.ip));
+        dropHost(c.lab, h.ip);
         c.fx.push({ k: "boom", ip: h.ip });
         return;
       }
@@ -1009,13 +1443,18 @@ function nmcli(c: Ctx, h: Host, a: string[]) {
       say(c, `Connection 'bridge-slave-${ifname}' successfully added.`);
       return tip(c, `Ahora ${opt("master")} tiene una NIC real (${ifname}): las MVs salen a esa red con su propia MAC. Eso es el modo bridged.`);
     }
-    if (type !== "bridge") return fail(c, `Error: invalid or not allowed setting 'type': '${type ?? ""}'`);
+    if (!type) return fail(c, "Error: 'type' argument is required.");
+    if (type !== "bridge" && type !== "vxlan") return fail(c, `Error: invalid or not allowed setting 'type': '${type}'`);
     if (!ifname) return fail(c, "Error: 'ifname' argument is required.");
-    if (h.bridges.has(ifname)) return fail(c, `Error: Failed to add '${opt("con-name") ?? ifname}' connection: connection.interface-name: '${ifname}' ya existe. Bórralo antes o modifícalo con nmcli device modify.`);
-    const method = (opt("ipv4.method") ?? "auto") as Bridge["method"];
-    const ip = opt("ipv4.addresses");
-    h.bridges.set(ifname, { con: opt("con-name") ?? `bridge-${ifname}`, method, ip: method === "manual" ? ip : undefined });
-    say(c, `Connection '${opt("con-name") ?? `bridge-${ifname}`}' (6f1a7c2e-${(++c.lab.seq).toString(16).padStart(4, "0")}-4c1e-9d2b-${ifname}a1b2c3) successfully added.`, "ok");
+    const name = p["connection.id"] ?? `${type}-${ifname}`;
+    if (h.bridges.has(ifname) || h.vx.has(ifname)) return fail(c, `Error: Failed to add '${name}' connection: connection.interface-name: '${ifname}' ya existe. Bórralo antes con nmcli connection delete.`);
+    const id = uuid(++c.lab.seq * 31 + h.ip.length);
+    if (type === "vxlan") return vxlanAdd(c, h, p, ifname, name, id);
+    const method = (p["ipv4.method"] ?? "auto") as Bridge["method"];
+    const ip = p["ipv4.addresses"];
+    if (method === "manual" && !ip) return fail(c, `Error: Failed to add '${name}' connection: ipv4.addresses: this property cannot be empty for 'method=manual'`);
+    h.bridges.set(ifname, { con: name, method, ip: method === "manual" ? ip : undefined, uuid: id });
+    say(c, `Connection '${name}' (${id}) successfully added.`, "ok");
     c.fx.push({ k: "boot", id: `br:${h.ip}:${ifname}` });
     c.lab.done.add(`bridge:${ifname}`);
     if (method === "auto") tip(c, "Con ipv4.method auto el host pedirá IP por DHCP en el bridge (nmcli device show br1). En la práctica se usa manual con 10.0.0.1/24.");
@@ -1024,18 +1463,23 @@ function nmcli(c: Ctx, h: Host, a: string[]) {
   if (isCon && (verb === "delete" || verb === "del")) {
     const name = rest[0];
     const hit = [...h.bridges].find(([, b]) => b.con === name);
-    if (!hit) return fail(c, `Error: unknown connection '${name ?? ""}'.\nError: cannot delete unknown connection(s): '${name ?? ""}'.`);
-    h.bridges.delete(hit[0]);
-    c.fx.push({ k: "gone", id: `br:${h.ip}:${hit[0]}` });
-    say(c, `Connection '${name}' (6f1a7c2e-…) successfully deleted.`, "ok");
+    const vx = [...h.vx].find(([, x]) => x.con === name);
+    if (!hit && !vx) return fail(c, `Error: unknown connection '${name ?? ""}'.\nError: cannot delete unknown connection(s): '${name ?? ""}'.`);
+    if (hit) h.bridges.delete(hit[0]);
+    if (vx) h.vx.delete(vx[0]);
+    c.fx.push({ k: "gone", id: hit ? `br:${h.ip}:${hit[0]}` : `vx:${h.ip}:${vx![0]}` });
+    say(c, `Connection '${name}' (${(hit?.[1].uuid ?? vx?.[1].uuid) || "6f1a7c2e-…"}) successfully deleted.`, "ok");
     c.lab.done.add("clean-con");
     return;
   }
   if (isCon && (verb === "show" || !verb)) {
-    say(c, "NAME     UUID                                  TYPE      DEVICE");
-    say(c, "ens32    0c63b5a8-2bd3-4c0e-9f07-3d1c5f0b7a11  ethernet  ens32");
-    say(c, "ens33    4f2e9a10-7b7c-4a43-8d2a-61f0c2b1d5e9  ethernet  ens33");
-    for (const [b, x] of h.bridges) say(c, `${x.con.padEnd(8)} 6f1a7c2e-…                            bridge    ${b}`);
+    const rows = [["NAME", "UUID", "TYPE", "DEVICE"], ["ens32", "0c63b5a8-2bd3-4c0e-9f07-3d1c5f0b7a11", "ethernet", "ens32"]];
+    for (const [b, x] of h.bridges) rows.push([x.con, x.uuid ?? "6f1a7c2e-0b7d-4c1e-9d2b-5a1b2c3d4e5f", "bridge", b]);
+    for (const [i, x] of h.vx) rows.push([x.con, x.uuid, "vxlan", brOf(h, x) ? i : "--"]);
+    rows.push(["ens33", "4f2e9a10-7b7c-4a43-8d2a-61f0c2b1d5e9", "ethernet", "ens33"], ["virbr0", "a0bd2c0e-3f63-4f6b-8e0e-5c4b2a1f9d77", "bridge", "virbr0"]);
+    const w = [0, 1, 2].map((k) => Math.max(...rows.map((r) => r[k].length)) + 2);
+    for (const r of rows) say(c, r.map((x, k) => (k < 3 ? x.padEnd(w[k]) : x)).join(""));
+    c.lab.done.add(`nmshow:${h.ip}`);
     return;
   }
   if (isCon && (verb === "up" || verb === "modify" || verb === "mod")) return say(c, "Connection successfully activated.");
@@ -1066,43 +1510,108 @@ function nmcli(c: Ctx, h: Host, a: string[]) {
     say(c, "ens32   ethernet  connected                              ens32");
     say(c, "ens33   ethernet  connected                              ens33");
     for (const [b, x] of h.bridges) say(c, `${b.padEnd(7)} bridge    connected                              ${x.con}`);
+    for (const [i, x] of h.vx) say(c, `${i.padEnd(7)} vxlan     ${brOf(h, x) ? "connected                             " : "disconnected                          "} ${x.con}`);
     say(c, "virbr0  bridge    connected (externally)                 virbr0");
     return;
   }
   return fail(c, "Error: argumento no simulado. Prueba nmcli connection add|show|delete o nmcli device show|modify|delete.");
 }
 
+// nmcli connection add takes «property value» pairs; these are the short names it accepts.
+const NM_ALIAS: Record<string, string> = { type: "connection.type", "con-name": "connection.id", ifname: "connection.interface-name", autoconnect: "connection.autoconnect", master: "connection.master", "slave-type": "connection.slave-type", stp: "bridge.stp", id: "vxlan.id", remote: "vxlan.remote", local: "vxlan.local", dev: "vxlan.parent", "destination-port": "vxlan.destination-port" };
+const NM_PROPS: Record<string, string[]> = {
+  connection: ["id", "type", "interface-name", "autoconnect", "master", "slave-type"],
+  bridge: ["stp", "priority", "forward-delay"],
+  vxlan: ["id", "remote", "local", "parent", "destination-port"],
+  ipv4: ["method", "dns", "dns-search", "dns-options", "addresses", "gateway", "routes", "never-default", "may-fail"],
+  ipv6: ["method", "addresses", "gateway", "addr-gen-mode"],
+};
+function nmPairs(c: Ctx, rest: string[]): Record<string, string> | undefined {
+  const out: Record<string, string> = {};
+  for (let i = 0; i < rest.length; i += 2) {
+    const k = rest[i];
+    const val = rest[i + 1];
+    const full = NM_ALIAS[k] ?? k;
+    const [set, prop] = full.split(".");
+    const no = (msg: string) => void fail(c, msg);
+    if (!prop || !NM_PROPS[set]) return no(`Error: invalid or not allowed setting '${set}': '${set}' not among [connection, 802-3-ethernet (ethernet), bridge, bridge-port, vxlan, ipv4, ipv6, …].`);
+    if (!NM_PROPS[set].includes(prop)) return no(`Error: invalid property '${prop}': '${prop}' not among [${NM_PROPS[set].join(", ")}, …].`);
+    if (val === undefined) return no(`Error: value for '${k}' is missing.`);
+    const among = (opts: string[]) => (opts.includes(val) ? undefined : `Error: failed to modify ${full}: '${val}' not among [${opts.join(", ")}].`);
+    const err =
+      full === "ipv4.method" ? among(["auto", "link-local", "manual", "shared", "disabled"])
+      : full === "ipv6.method" ? among(["ignore", "auto", "dhcp", "link-local", "manual", "shared", "disabled"])
+      : full === "bridge.stp" || full === "connection.autoconnect" ? among(["yes", "no", "true", "false"])
+      : full === "vxlan.id" && !(/^\d+$/.test(val) && +val < 16777216) ? `Error: failed to modify vxlan.id: '${val}' is not valid; use <0-16777215>.`
+      : (full === "vxlan.remote" || full === "vxlan.local") && !isIp(val) ? `Error: failed to modify ${full}: '${val}' is not a valid IP address.`
+      : full === "ipv4.addresses" && !/^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/.test(val) ? `Error: failed to modify ipv4.addresses: invalid IP address: '${val}'.`
+      : undefined;
+    if (err) return no(err);
+    out[full] = val;
+  }
+  return out;
+}
+
+function vxlanAdd(c: Ctx, h: Host, p: Record<string, string>, ifname: string, name: string, id: string) {
+  const master = p["connection.master"];
+  if (!p["vxlan.id"]) return fail(c, `Error: Failed to add '${name}' connection: vxlan.id: property is missing`);
+  if (!p["vxlan.remote"]) return fail(c, `Error: Failed to add '${name}' connection: vxlan.remote: property is missing`);
+  if (master && p["connection.slave-type"] !== "bridge") return fail(c, `Error: Failed to add '${name}' connection: connection.slave-type: Cannot set 'master' without 'slave-type'.`);
+  const vni = +p["vxlan.id"];
+  const remote = p["vxlan.remote"];
+  const dup = [...h.vx.values()].some((x) => x.id === vni && !x.dup);
+  const x: Vx = { con: name, id: vni, remote, master, uuid: id, dup };
+  h.vx.set(ifname, x);
+  say(c, `Connection '${name}' (${id}) successfully added.`, "ok");
+  c.fx.push({ k: "boot", id: `vx:${h.ip}:${ifname}` });
+  c.lab.done.add(`vxlan:${ifname}`);
+  if (dup) {
+    c.lab.done.add("trap:vni");
+    tip(c, `${h.label} ya tiene otra VXLAN con id ${vni}: el kernel no deja dos iguales (RTNETLINK answers: File exists) y ${name} no se activa (DEVICE --). Cada LAN, su id.`);
+  }
+  if (remote === h.ip) tip(c, "remote apunta a esta misma KVM: tiene que ser la IP de la OTRA (su ens32).");
+  else if (!hostOf(c.lab, remote)) tip(c, `${remote} no es ninguna KVM: remote es la IP normal de la otra (ens32, 10.0.16.17x), no la de br0.`);
+  if (!master) tip(c, "Sin master la VXLAN no cuelga de ningún bridge: añade slave-type bridge master BRIDGE.");
+  else if (!brOf(h, x) && !dup) tip(c, `En ${h.label} no hay ningún bridge «${master}»: la VXLAN queda colgando hasta que exista.`);
+}
+
 function firewall(c: Ctx, h: Host, a: string[]) {
   const perm = a.includes("--permanent");
-  const set = perm ? h.perm : h.open;
   const arg = (k: string) => a.find((x) => x.startsWith(k))?.split("=")[1];
   const add = arg("--add-port");
   const rem = arg("--remove-port");
   if (a.some((x) => /^[–—]/.test(x) || x.includes("–"))) return fail(c, "usage: see firewall-cmd man page\nfirewall-cmd: error: unrecognized arguments (¿guion largo copiado del PDF?)");
-  if (add) {
-    const port = parseInt(add, 10);
-    if (set.has(port)) say(c, `Warning: ALREADY_ENABLED: ${add}`);
-    set.add(port);
-    say(c, "success", "ok");
-    if (!perm) {
-      c.fx.push({ k: "flash", id: `fw:${h.ip}:${port}` });
-      c.lab.done.add(`fw:${port}`);
-    } else tip(c, "Con --permanent se guarda para el próximo arranque, pero NO se aplica ahora: repite el comando sin --permanent.");
-    return;
-  }
-  if (rem) {
-    set.delete(parseInt(rem, 10));
-    c.fx.push({ k: "gone", id: `fw:${h.ip}:${parseInt(rem, 10)}` });
+  const spec = add ?? rem;
+  if (spec !== undefined) {
+    const m = /^(\d+)\/(tcp|udp)$/.exec(spec);
+    if (!m) return fail(c, "Error: INVALID_PORT: bad port (most likely missing protocol), correct syntax is portid[-portid]/protocol");
+    const port = +m[1];
+    const udp = m[2] === "udp";
+    const set = udp ? (perm ? h.permUdp : h.udp) : perm ? h.perm : h.open;
+    if (add) {
+      if (set.has(port)) say(c, `Warning: ALREADY_ENABLED: ${perm ? `${port}:${m[2]}` : `'${port}:${m[2]}' already in 'public'`}`);
+      set.add(port);
+      say(c, "success", "ok");
+      if (!perm) {
+        c.fx.push(udp ? { k: "gate", host: h.ip, port: spec, open: true } : { k: "flash", id: `fw:${h.ip}:${port}` });
+        c.lab.done.add(udp ? `fwu:${port}` : `fw:${port}`);
+      } else tip(c, "Con --permanent se guarda para el próximo arranque, pero NO se aplica ahora: repite el comando sin --permanent.");
+      return;
+    }
+    set.delete(port);
+    c.fx.push(udp ? { k: "gate", host: h.ip, port: spec, open: false } : { k: "gone", id: `fw:${h.ip}:${port}` });
     return say(c, "success", "ok");
   }
-  if (a.includes("--list-ports")) return say(c, [...set].map((p) => `${p}/tcp`).join(" "));
-  if (a.includes("--list-all")) return say(c, `public (active)\n  target: default\n  interfaces: ens32 ens33\n  services: cockpit dhcpv6-client ssh\n  ports: ${[...set].map((p) => `${p}/tcp`).join(" ")}`);
+  const list = (t: Set<number>, u: Set<number>) => [...[...t].map((p) => `${p}/tcp`), ...[...u].map((p) => `${p}/udp`)].join(" ");
+  if (a.includes("--list-ports")) return say(c, perm ? list(h.perm, h.permUdp) : list(h.open, h.udp));
+  if (a.includes("--list-all")) return say(c, `public (active)\n  target: default\n  interfaces: ens32 ens33\n  services: cockpit dhcpv6-client ssh\n  ports: ${list(h.open, h.udp)}`);
   if (a.includes("--reload")) {
     h.open = new Set(h.perm);
+    h.udp = new Set(h.permUdp);
     return say(c, "success", "ok");
   }
   if (a.includes("--state")) return say(c, "running");
-  return fail(c, "usage: firewall-cmd --add-port=PUERTO/tcp [--permanent] | --remove-port=… | --list-ports");
+  return fail(c, "usage: firewall-cmd --add-port=PUERTO/tcp|udp [--permanent] | --remove-port=… | --list-ports");
 }
 
 function free(c: Ctx, h: Host) {
@@ -1189,7 +1698,7 @@ function boom(c: Ctx, h: Host) {
   say(c, `Connection to ${h.ip} closed by remote host.`);
   fail(c, `Has apagado el SERVIDOR ${h.label}, no una máquina virtual. En el laboratorio solo el profesor puede volver a encenderlo.`);
   tip(c, "Mira siempre el prompt: [root@vm-16-17x ~]# es el servidor; localhost:~# es la MV. Truco: alias poweroff=\" echo 'Acción no permitida' \" en el servidor.");
-  c.lab.stack.splice(c.lab.stack.findIndex((f) => f.ip === h.ip));
+  dropHost(c.lab, h.ip);
   c.fx.push({ k: "boom", ip: h.ip });
 }
 
@@ -1214,6 +1723,12 @@ function qemuImg(c: Ctx, h: Host, a: string[]) {
         const bpath = b.startsWith("/") ? norm(b) : norm(`${dirOf(at)}/${b}`);
         const parent = real(h, bpath);
         if (!parent) return fail(c, `qemu-img: ${file}: Could not open '${bpath}': No such file or directory\nCould not open backing image.`);
+        const broken = chain(h, bpath).broken;
+        if (broken) {
+          c.lab.done.add("trap:base");
+          fail(c, `qemu-img: ${file}: Could not open '${baseName(broken)}': No such file or directory\nCould not open backing image.`);
+          return tip(c, `${b} es a su vez un linked clone: necesita SU base, con el nombre exacto (${baseName(broken)}), en su misma carpeta.`);
+        }
         if (!opt("-F")) say(c, `qemu-img: warning: Deprecated use of backing file without explicit backing format (detected format of ${parent.fmt})`, "warn");
         if (fmt !== "qcow2") return fail(c, `qemu-img: ${file}: Backing file not supported for file format '${fmt}'`);
         const size = pos[1] ? mib(pos[1]) : parent.virt;
@@ -1240,6 +1755,10 @@ function qemuImg(c: Ctx, h: Host, a: string[]) {
       const at = abs(h, file);
       const ch = chain(h, at);
       if (!ch.list.length) return fail(c, `qemu-img: Could not open '${file}': Could not open '${file}': No such file or directory`);
+      if (ch.broken) {
+        c.lab.done.add("trap:base");
+        return fail(c, `qemu-img: Could not open '${file}': Could not open backing file: Could not open '${baseName(ch.broken)}': No such file or directory`);
+      }
       const deep = rest.includes("--backing-chain");
       const names = [file, ...ch.list.slice(0, -1).map((i) => i.bname ?? "")];
       ch.list.slice(0, deep ? undefined : 1).forEach((img, i) => {
@@ -1260,7 +1779,6 @@ function qemuImg(c: Ctx, h: Host, a: string[]) {
         }
         if (img.fmt === "qcow2") say(c, "Format specific information:\n    compat: 1.1\n    compression type: zlib\n    lazy refcounts: false\n    refcount bits: 16\n    corrupt: false\n    extended l2: false");
       });
-      if (deep && ch.broken) fail(c, `qemu-img: Could not open '${ch.broken}': No such file or directory`);
       if (deep) c.lab.done.add("info-chain");
       if (ch.list[0].stale) tip(c, "Ojo: su base cambió después de crearlo (commit o cambios en la base): sus datos pueden ser incoherentes.");
       return;
@@ -1397,7 +1915,7 @@ function qemu(c: Ctx, h: Host, cmd: Cmd, a: string[]) {
         spec.netdevs.push({ ...kv(more.join(",")), kind, hostfwd: fwd.join(" ") });
       } else if (o === "-device") {
         const [model, ...more] = v.split(",");
-        if (NIC_MODELS.includes(model)) spec.devices.push({ ...kv(more.join(",")), model });
+        if (NIC_MODELS.includes(model)) spec.devices.push({ ...kv(more.join(",")), model, raw: v });
       } else if (o === "-nic") {
         const [kind, ...more] = v.split(",");
         const fwd = more.filter((p) => p.startsWith("hostfwd=")).map((p) => p.slice(8));
@@ -1420,7 +1938,10 @@ function qemu(c: Ctx, h: Host, cmd: Cmd, a: string[]) {
   const disk = abs(h, boot);
   const ch = chain(h, disk);
   if (!ch.list.length) return fail(c, `qemu-system-x86_64: Could not open '${boot}': No such file or directory`);
-  if (ch.broken) return fail(c, `qemu-system-x86_64: Could not open backing file: Could not open '${baseName(ch.broken)}': No such file or directory`);
+  if (ch.broken) {
+    lab.done.add("trap:base");
+    return fail(c, `qemu-system-x86_64: ${boot}: Could not open backing file: Could not open '${baseName(ch.broken)}': No such file or directory`);
+  }
   for (const e of extra) if (!real(h, e.path)) return fail(c, `qemu-system-x86_64: -drive file=${e.file}: Could not open '${e.file}': No such file or directory`);
   // image locks: a writer excludes everyone else; backing files can be shared by readers
   const mine = { w: spec.snapshot ? [] : [ch.list[0]], r: spec.snapshot ? ch.list : ch.list.slice(1) };
@@ -1446,7 +1967,16 @@ function qemu(c: Ctx, h: Host, cmd: Cmd, a: string[]) {
       .map((m) => ({ host: +m[1], guest: +m[2] }));
   for (const d of spec.devices) {
     const nd = spec.netdevs.find((n) => n.id === d.netdev);
-    if (!d.netdev || !nd) return fail(c, `qemu-system-x86_64: -device ${d.model},netdev=${d.netdev ?? ""}${d.mac ? `,mac=${d.mac}` : ""}: Property '${d.model}.netdev' can't find value '${d.netdev ?? ""}'`);
+    if (!d.netdev || !nd) {
+      lab.done.add("trap:netdev");
+      fail(c, `qemu-system-x86_64: -device ${d.raw}: Property '${d.model}.netdev' can't find value '${d.netdev ?? ""}'`);
+      return tip(c, `netdev= (en -device) e id= (en -netdev) son la misma etiqueta, local a esta MV: aquí ${spec.netdevs.map((n) => `id=${n.id}`).join(", ") || "no hay ningún -netdev"}. El bridge va en br=.`);
+    }
+    if (d.mac !== undefined && !/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(d.mac)) {
+      lab.done.add("trap:mac");
+      fail(c, `qemu-system-x86_64: -device ${d.raw}: Property '${d.model}.mac' doesn't take value '${d.mac}'`);
+      return tip(c, "Una MAC son 6 pares de dígitos hexadecimales separados por «:» (DE:AD:BE:EF:E3:50).");
+    }
     nics.push({ id: nd.id, kind: nd.kind === "bridge" ? "bridge" : "user", br: nd.br || (nd.kind === "bridge" ? "br0" : undefined), model: d.model, mac: (d.mac ?? macs[nics.length]).toUpperCase(), fwd: fwdOf(nd.hostfwd ?? "") });
   }
   for (const nd of spec.netdevs) if (!spec.devices.some((d) => d.netdev === nd.id)) say(c, `qemu-system-x86_64: warning: netdev ${nd.id} has no peer`, "warn");
@@ -1472,7 +2002,11 @@ function qemu(c: Ctx, h: Host, cmd: Cmd, a: string[]) {
   }
   for (const n of nics)
     for (const f of n.fwd)
-      if (h.vms.some((v) => v.nics.some((x) => x.fwd.some((y) => y.host === f.host)))) return fail(c, `qemu-system-x86_64: -netdev user,id=${n.id},hostfwd=tcp::${f.host}-:${f.guest}: Could not set up host forwarding rule 'tcp::${f.host}-:${f.guest}'`);
+      if (h.vms.some((v) => v.nics.some((x) => x.fwd.some((y) => y.host === f.host)))) {
+        lab.done.add("trap:hostfwd");
+        fail(c, `qemu-system-x86_64: -netdev user,id=${n.id},hostfwd=tcp::${f.host}-:${f.guest}: Could not set up host forwarding rule 'tcp::${f.host}-:${f.guest}'`);
+        return tip(c, `El ${f.host} de ${h.label} ya lo usa otra MV: cada hostfwd, su puerto del host.`);
+      }
   // serial and qmp
   let telnet: number | undefined;
   let mon = !spec.serial;
@@ -1516,12 +2050,18 @@ function qemu(c: Ctx, h: Host, cmd: Cmd, a: string[]) {
     fwdOn: false,
     routes: [],
     oneTty: false,
+    svc: {},
+    log: [],
+    leases: {},
   };
   h.vms.push(v);
   taps(h);
   c.fx.push({ k: "boot", id: `vm:${pid}` });
   for (const n of nics) if (n.kind === "bridge") c.fx.push({ k: "packet", path: [`vm:${pid}`, `br:${h.ip}:${n.br}`], tone: "ok" });
-  if (!spec.kvm) tip(c, "Sin --enable-kvm QEMU emula la CPU con TCG (traducción binaria): funciona, pero mucho más lento.");
+  if (!spec.kvm) {
+    lab.done.add("trap:kvm");
+    tip(c, "Sin --enable-kvm QEMU emula la CPU con TCG (traducción binaria): funciona, pero mucho más lento.");
+  }
   const asked = h.vms.reduce((s, x) => s + x.mem, 0);
   if (asked > RAM * 0.8) tip(c, `Overcommit: ya hay ${asked} MiB de RAM pedidos para MVs en un servidor de ~1,9 GiB.`);
   if (qmp) lab.done.add(`qmp:${spec.name ?? ""}`);
@@ -1576,9 +2116,18 @@ function telnet(c: Ctx, h: Host, port: number, from: "pc" | "server", label?: st
   if (!v) return fail(c, "telnet: Unable to connect to remote host: Connection refused");
   say(c, `Connected to ${who}.`);
   say(c, "Escape character is '^]'.");
-  c.lab.stack.push({ k: "vm", ip: h.ip, pid: v.pid, via: "telnet" });
+  // QEMU serves one client per console: a second one waits in line, and so does what it types
+  const busy = Object.values(c.lab.stacks).some((s) => s!.some((f) => f.k === "vm" && f.pid === v.pid && f.via === "telnet" && !f.wait));
+  const frame: Frame = { k: "vm", ip: h.ip, pid: v.pid, via: "telnet", login: c.lab.real ? 0 : undefined, wait: busy || undefined };
+  c.lab.stack.push(frame);
   c.fx.push({ k: "packet", path: from === "pc" ? ["pc", "vpn", `fw:${h.ip}:${port}`, `vm:${v.pid}`] : [`srv:${h.ip}`, `vm:${v.pid}`] });
   c.lab.done.add(`telnet-${from}`);
+  if (busy) {
+    c.lab.done.add("trap:telnet2");
+    c.fx.push({ k: "queue", host: h.ip, port, vm: `vm:${v.pid}`, on: true });
+    return;
+  }
+  if (c.lab.real) return; // the console shows nothing until you press Enter
   if (!isUp(v, c.now)) say(c, "(la MV todavía está arrancando…)", "dim");
   else {
     say(c, "");
@@ -1591,13 +2140,15 @@ function telnet(c: Ctx, h: Host, port: number, from: "pc" | "server", label?: st
 function hostfwdSsh(c: Ctx, h: Host, port: number, from: "pc" | "server") {
   const v = h.vms.find((x) => x.nics.some((n) => n.fwd.some((f) => f.host === port && f.guest === 22)));
   if (from === "pc" && !h.open.has(port)) {
+    c.lab.done.add("trap:fw");
+    c.fx.push({ k: "packet", path: ["pc", "vpn", `fw:${h.ip}:${port}`], tone: "err" });
     fail(c, `ssh: connect to host ${h.ip} port ${port}: No route to host`);
     return tip(c, `Desde fuera, el firewall tiene que dejar pasar el ${port}: firewall-cmd --add-port=${port}/tcp.`);
   }
   if (!v || !isUp(v, c.now)) return fail(c, `ssh: connect to host ${from === "pc" ? h.ip : "localhost"} port ${port}: Connection refused`);
   say(c, `root@${from === "pc" ? h.ip : "localhost"}'s password: ••••••••`);
   say(c, "Welcome to Alpine!");
-  c.lab.stack.push({ k: "vm", ip: h.ip, pid: v.pid, via: "ssh" });
+  c.lab.stack.push({ k: "vm", ip: h.ip, pid: v.pid, via: "ssh", to: from === "pc" ? h.ip : "localhost" });
   c.fx.push({ k: "packet", path: from === "pc" ? ["pc", "vpn", `fw:${h.ip}:${port}`, `nat:${v.pid}`, `vm:${v.pid}`] : [`srv:${h.ip}`, `nat:${v.pid}`, `vm:${v.pid}`] });
   c.lab.done.add(`ssh-fwd-${from}`);
 }
@@ -1622,26 +2173,24 @@ function sshFromServer(c: Ctx, h: Host, a: string[]) {
     fail(c, `ssh: connect to host ${dest} port 22: No route to host`);
     return tip(c, "La 10.0.2.x de la red user solo existe dentro del proceso QEMU de esa MV: desde el host no se llega. Hace falta hostfwd (o un bridge).");
   }
-  const t = target(c, h, dest);
-  const myIp = (() => {
-    for (const [b] of h.bridges) if (sameNet(bridgeIp(h, b), dest)) return bridgeIp(h, b);
-    return undefined;
-  })();
-  if (!t || !myIp || !isUp(t.v, c.now)) return fail(c, `ssh: connect to host ${dest} port 22: No route to host`);
+  const t = target(c, dest);
+  const myBr = t && [...h.bridges.keys()].find((b) => sameNet(bridgeIp(h, b), dest) && segOf(c.lab, h.ip, b) === segOf(c.lab, t.h.ip, t.n.br!));
+  if (!t || !myBr || !isUp(t.v, c.now)) return fail(c, `ssh: connect to host ${dest} port 22: No route to host`);
   say(c, `root@${dest}'s password: ••••••••`);
   say(c, "Welcome to Alpine!");
-  c.lab.stack.push({ k: "vm", ip: h.ip, pid: t.v.pid, via: "ssh" });
-  c.fx.push({ k: "packet", path: [`srv:${h.ip}`, `br:${h.ip}:${t.n.br}`, `vm:${t.v.pid}`] });
+  c.lab.stack.push({ k: "vm", ip: t.h.ip, pid: t.v.pid, via: "ssh", to: dest });
+  c.fx.push({ k: "packet", path: [`srv:${h.ip}`, ...hops(c.lab, h, myBr, t.h, t.n.br!).path, `vm:${t.v.pid}`] });
   c.lab.done.add("ssh-bridge");
 }
 
-/** The VM NIC that owns an IP on this host. */
-function target(c: Ctx, h: Host, ip: string) {
-  for (const v of h.vms) {
-    ips(c.lab, h, v, c.now);
-    const n = v.nics.find((x) => x.kind === "bridge" && x.ip === ip);
-    if (n) return { v, n };
-  }
+/** The VM bridge NIC that owns an IP, on any host. */
+function target(c: Ctx, ip: string) {
+  for (const h of c.lab.hosts)
+    for (const v of h.vms) {
+      ips(c.lab, h, v, c.now, c.fx);
+      const n = v.nics.find((x) => x.kind === "bridge" && x.ip === ip);
+      if (n) return { h, v, n };
+    }
   return undefined;
 }
 
@@ -1655,8 +2204,8 @@ function web(c: Ctx, url: string, from: "pc" | "server" | "vm", h?: Host, save =
   if (from === "pc") srv = findHost(c.lab, host);
   else if (from === "vm" && me && host === "10.0.2.2") srv = h;
   else if (from === "server" && !/^(localhost|127\.0\.0\.1)$/.test(host) && host !== h?.ip) {
-    const t = h ? target(c, h, host) : undefined;
-    if (t && t.v.role === "web" && port === 80 && isUp(t.v, c.now)) return page(c, save, [`srv:${h!.ip}`, `br:${h!.ip}:${t.n.br}`, `vm:${t.v.pid}`]);
+    const t = h ? target(c, host) : undefined;
+    if (t && t.h === h && t.v.role === "web" && port === 80 && isUp(t.v, c.now)) return page(c, save, [`srv:${h.ip}`, `br:${h.ip}:${t.n.br}`, `vm:${t.v.pid}`]);
     return fail(c, `curl: (7) Failed to connect to ${host} port ${port}: No route to host`);
   }
   if (!srv) return fail(c, `curl: (6) Could not resolve host: ${host}`);
@@ -1692,24 +2241,61 @@ function guest(c: Ctx, h: Host, v: Vm, cmd: Cmd) {
   if (f.via === "none") return tip(c, "Esta terminal está ocupada por QEMU sin consola. Ctrl+C para matarla.");
   if (v.paused) return tip(c, "La MV está en pausa (stop en el monitor): no responde. Ctrl+A c y cont para reanudarla.");
   if (!isUp(v, c.now)) return say(c, "(la MV todavía está arrancando…)", "dim");
-  ips(c.lab, h, v, c.now);
+  ips(c.lab, h, v, c.now, c.fx);
+  const hn = vmHostname(c.lab, v);
   switch (name) {
     case "help":
       return help(c, "vm");
     case "hostname":
-      return say(c, "localhost");
+      return say(c, hn);
     case "whoami":
       return say(c, "root");
     case "uname":
-      return say(c, "Linux localhost 5.10.43-0-virt #1-Alpine SMP x86_64 Linux");
-    case "cat":
+      return say(c, `Linux ${hn} 5.10.43-0-virt #1-Alpine SMP x86_64 Linux`);
+    case "cat": {
+      const net = netOf(h, v);
       if (a[0] === "/etc/os-release") return say(c, 'NAME="Alpine Linux"\nVERSION_ID=3.13.5');
       if (a[0] === "/boot/extlinux.conf") return extlinux(c, h, v, false);
       if (a[0] === "/proc/sys/net/ipv4/ip_forward") return say(c, v.fwdOn ? "1" : "0");
+      if (a[0] === "/etc/hostname") return say(c, hn);
+      if (a[0] === "/etc/network/interfaces") return say(c, ifacesText(net));
+      if (a[0] === "/var/log/messages") return say(c, v.log.join("\n"));
+      if (a[0] === "/etc/dhcp/dhcpd.conf" && net.conf) return say(c, net.conf.join("\n"));
+      if (a[0] === "/var/lib/dhcp/dhcpd.leases" && v.role === "dhcp") return say(c, Object.entries(v.leases).map(([mac, ip]) => `lease ${ip} {\n  binding state active;\n  hardware ethernet ${mac};\n}`).join("\n") || "# The format of this file is documented in the dhcpd.leases(5) manual page.");
       return fail(c, `cat: can't open '${a[0] ?? ""}': No such file or directory`);
+    }
+    case "setup-interfaces": {
+      const old = netOf(h, v).ifs;
+      say(c, `Available interfaces are: ${v.nics.map((_, i) => `eth${i}`).join(" ")}.\nEnter '?' for help on bridges, bonding and vlans.`);
+      f.ask = { q: "pick", cfg: {}, old };
+      return;
+    }
+    case "service":
+    case "rc-service":
+      return service(c, h, v, a[0], a[1]);
+    case "rc-status":
+      say(c, "Runlevel: default");
+      for (const s of ["networking", "sshd", ...(v.role === "dhcp" ? ["dhcpd"] : [])]) say(c, ` ${s.padEnd(50)}[  ${(v.svc[s] ?? "started") === "started" ? "started" : "stopped"}  ]`);
+      return;
+    case "dhcpd": {
+      if (v.role !== "dhcp") return fail(c, "-ash: dhcpd: not found");
+      say(c, "Internet Systems Consortium DHCP Server 4.4.2-P1\nCopyright 2004-2021 Internet Systems Consortium.\nAll rights reserved.\nFor info, please visit https://www.isc.org/software/dhcp/");
+      say(c, "Config file: /etc/dhcp/dhcpd.conf\nDatabase file: /var/lib/dhcp/dhcpd.leases\nPID file: /run/dhcp/dhcpd.pid");
+      const p = parseConf(netOf(h, v).conf ?? []);
+      if (p.err) return fail(c, p.err.join("\n"));
+      if (!a.includes("-t")) tip(c, "dhcpd -t solo revisa el fichero; el servicio se arranca con service dhcpd restart.");
+      return;
+    }
     case "vi":
     case "nano":
       if (a[0] === "/boot/extlinux.conf") return extlinux(c, h, v, true);
+      if (a[0] === "/etc/dhcp/dhcpd.conf" && netOf(h, v).conf) {
+        const text = netOf(h, v).conf!;
+        f.edit = { path: a[0], buf: [...text], dirty: false };
+        c.fx.push({ k: "edit", vm: `vm:${v.pid}`, file: a[0], text: text.join("\n") });
+        return say(c, `"${a[0]}" ${text.length}L, ${text.join("\n").length + 1}C (editor: cambia el texto y guarda con :wq; sin guardar, :q!)`, "dim");
+      }
+      if (a[0] === "/etc/network/interfaces") return tip(c, "Para la IP de la MV usa setup-interfaces: escribe este fichero por ti.");
       return tip(c, "Editor simulado solo para /boot/extlinux.conf.");
     case "sed":
       if (a.some((x) => x.includes("console=ttyS0")) && a.includes("/boot/extlinux.conf")) return fixTty(c, h, v);
@@ -1721,14 +2307,14 @@ function guest(c: Ctx, h: Host, v: Vm, cmd: Cmd) {
     case "udhcpc":
       return udhcpc(c, h, v, a);
     case "ping":
-      return ping(c, { h, v }, a.filter((x) => !x.startsWith("-") && !/^\d+$/.test(x)).pop() ?? "");
+      return ping(c, { h, v }, a.filter((x) => !x.startsWith("-") && !/^\d+$/.test(x)).pop() ?? "", count(a));
     case "wget":
     case "curl": {
       const url = a.find((x) => !x.startsWith("-")) ?? "";
       if (url.includes(REPO)) return say(c, "Connecting to www.ho.ac.uma.es... connected. (la MV llega al repositorio a través del NAT de QEMU)", "ok");
       if (/10\.0\.2\.2/.test(url) && v.nics.some((n) => n.kind === "user")) return fail(c, "wget: can't connect to remote host (10.0.2.2): Connection refused\n(en el servidor no hay ningún servidor web escuchando)");
-      const t = target(c, h, /^(?:https?:\/\/)?([^/:]+)/.exec(url)?.[1] ?? "");
-      if (t && t.v.role === "web" && reachable(c, h, v, t.n.ip!)) return page(c, name === "wget", [`vm:${v.pid}`, `br:${h.ip}:${t.n.br}`, `vm:${t.v.pid}`]);
+      const t = target(c, /^(?:https?:\/\/)?([^/:]+)/.exec(url)?.[1] ?? "");
+      if (t && t.v.role === "web" && reachable(c, h, v, t.n.ip!)) return page(c, name === "wget", [`vm:${v.pid}`, `br:${t.h.ip}:${t.n.br}`, `vm:${t.v.pid}`]);
       return fail(c, `wget: bad address '${url}'\n(en la VLAN 301 no hay salida a Internet)`);
     }
     case "ssh": {
@@ -1751,12 +2337,13 @@ function guest(c: Ctx, h: Host, v: Vm, cmd: Cmd) {
         c.lab.done.add("ssh-vm-host");
         return;
       }
-      const t = target(c, h, dest);
+      const t = target(c, dest);
       if (!t || t.v === v || !reachable(c, h, v, dest) || !isUp(t.v, c.now)) return fail(c, `ssh: connect to host ${dest} port 22: Host is unreachable`);
       say(c, `root@${dest}'s password: ••••••••`);
       say(c, "Welcome to Alpine!");
-      c.lab.stack.push({ k: "vm", ip: h.ip, pid: t.v.pid, via: "ssh" });
-      c.fx.push({ k: "packet", path: [`vm:${v.pid}`, `br:${h.ip}:${t.n.br}`, `vm:${t.v.pid}`] });
+      c.lab.stack.push({ k: "vm", ip: t.h.ip, pid: t.v.pid, via: "ssh", to: dest });
+      const mine = v.nics.find((n) => n.kind === "bridge" && sameNet(n.ip, dest));
+      c.fx.push({ k: "packet", path: [`vm:${v.pid}`, ...(mine ? hops(c.lab, h, mine.br!, t.h, t.n.br!).path : [`br:${t.h.ip}:${t.n.br}`]), `vm:${t.v.pid}`] });
       c.lab.done.add("ssh-vm-vm");
       return;
     }
@@ -1792,9 +2379,13 @@ function guest(c: Ctx, h: Host, v: Vm, cmd: Cmd) {
         return say(c, "net.ipv4.ip_forward = 1");
       }
       return say(c, `net.ipv4.ip_forward = ${v.fwdOn ? 1 : 0}`);
-    case "grep":
-      if (v.role === "dhcp" && a.includes("dhcpd")) return h.dhcpLog.length ? h.dhcpLog.forEach((l) => say(c, `Nov  2 10:3${Math.min(9, h.dhcpLog.indexOf(l))}:12 localhost daemon.info ${l}`)) : say(c, "(todavía no ha repartido ninguna IP)", "dim");
-      return fail(c, "grep: (simulador) prueba: grep dhcpd /var/log/messages en el servidor DHCP");
+    case "grep": {
+      const [pat, file] = a.filter((x) => !x.startsWith("-"));
+      if (file !== "/var/log/messages") return fail(c, "grep: (simulador) prueba: grep dhcpd /var/log/messages en el servidor DHCP");
+      const hits = v.log.filter((l) => l.includes(pat ?? ""));
+      if (!hits.length) return void (c.ok = false);
+      return say(c, hits.join("\n"));
+    }
     case "poweroff":
     case "halt":
       if (a.includes("-f")) return kill(c, h, v, "(apagado inmediato: el guest no hace nada)");
@@ -1810,9 +2401,15 @@ function guest(c: Ctx, h: Host, v: Vm, cmd: Cmd) {
     case "exit":
     case "logout":
       if (f.via === "ssh") {
-        say(c, `Connection to ${ipOfVm(v)} closed.`);
+        say(c, `Connection to ${f.to ?? ipOfVm(v)} closed.`);
         c.lab.stack.pop();
         return;
+      }
+      if (c.lab.real) {
+        v.logged = false;
+        f.login = 1;
+        say(c, "");
+        return tip(c, "Has cerrado la sesión, pero sigues en la consola (login:). Para salir del telnet sin apagar la MV: Ctrl+] y quit.");
       }
       say(c, "");
       say(c, "localhost login: root");
@@ -1820,10 +2417,7 @@ function guest(c: Ctx, h: Host, v: Vm, cmd: Cmd) {
       say(c, "Welcome to Alpine!");
       return tip(c, f.via === "telnet" ? "Para salir del telnet sin apagar la MV: Ctrl+] y quit." : "Para salir de la consola: Ctrl+A x la mata; poweroff la apaga bien.");
     case "ls":
-      return say(c, a[0]?.includes("boot") ? "System.map-virt  config-virt  extlinux.conf  initramfs-virt  vmlinuz-virt" : "");
-    case "rc-service":
-    case "service":
-      return say(c, ` * status: started`, "ok");
+      return say(c, a[0]?.includes("boot") ? "System.map-virt  config-virt  extlinux.conf  initramfs-virt  vmlinuz-virt" : a[0] === "/etc/init.d" ? `${v.role === "dhcp" ? "dhcpd  " : ""}networking  sshd  udhcpc` : "");
     default:
       return fail(c, `-ash: ${name}: not found`);
   }
@@ -1874,16 +2468,37 @@ function guestIp(c: Ctx, h: Host, v: Vm, a: string[]) {
     v.nics.forEach((n, i) => n.ip && say(c, `${n.ip.split(".").slice(0, 3).join(".")}.0/24 dev eth${i} scope link  src ${n.ip}`));
     return;
   }
-  say(c, "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN qlen 1000\n    inet 127.0.0.1/8 scope host lo");
+  say(c, "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n    inet6 ::1/128 scope host");
+  const cfg = netOf(h, v).ifs;
   v.nics.forEach((n, i) => {
-    say(c, `${i + 2}: eth${i}: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000`);
+    const up = !!n.ip || n.kind === "user" || ["dhcp", "static"].includes(cfg[`eth${i}`]?.type ?? "");
+    say(c, up ? `${i + 2}: eth${i}: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000` : `${i + 2}: eth${i}: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN qlen 1000`);
     say(c, `    link/ether ${n.mac.toLowerCase()} brd ff:ff:ff:ff:ff:ff`);
     if (n.ip) say(c, `    inet ${n.ip}/24 scope global eth${i}`, "ok");
+    if (up) say(c, `    inet6 ${eui64(n.mac)}/64 scope link`);
   });
   if (v.nics.some((n) => n.kind === "user")) tip(c, "Red user: la MV es 10.0.2.15, el host (gateway) 10.0.2.2 y el DNS 10.0.2.3.");
-  if (v.nics.some((n) => n.kind === "bridge" && !n.ip)) tip(c, "Esa interfaz del bridge no tiene IP: ¿estaba ya arrancado el servidor DHCP cuando arrancó esta MV? Prueba udhcpc -i eth0.");
+  v.nics.forEach((n, i) => {
+    if (n.kind !== "bridge" || n.ip) return;
+    if (!c.lab.real) return tip(c, `Esa interfaz del bridge no tiene IP: ¿estaba ya arrancado el servidor DHCP cuando arrancó esta MV? Prueba udhcpc -i eth${i}.`);
+    if (cfg[`eth${i}`]?.type !== "dhcp") {
+      c.lab.done.add("trap:eth1");
+      return tip(c, `eth${i} no está en /etc/network/interfaces: no pide IP sola. udhcpc -i eth${i} (o setup-interfaces + service networking restart).`);
+    }
+    const near = lanOf(c.lab, h, n.br!).some((o) => serving(o.v));
+    if (!near && c.lab.hosts.some((x) => x !== h && x.vms.some((y) => serving(y)))) c.lab.done.add("trap:vxlan");
+    tip(c, `udhcpc sigue pidiendo IP en segundo plano por eth${i}, pero no contesta nadie: ¿dhcpd parado? ¿falta la VXLAN o el 8472/udp?`);
+  });
   c.lab.done.add("ip-vm");
 }
+
+const eui64 = (mac: string) => {
+  const b = mac.split(":").map((x) => parseInt(x, 16));
+  return `fe80::${[(b[0] ^ 2) * 256 + b[1], b[2] * 256 + 0xff, 0xfe00 + b[3], b[4] * 256 + b[5]].map((x) => x.toString(16)).join(":")}`;
+};
+const count = (a: string[]) => (a.includes("-c") ? Math.max(1, Math.min(10, +a[a.indexOf("-c") + 1] || 4)) : 4);
+const ifacesText = (n: Net) =>
+  ["auto lo", "iface lo inet loopback", ...Object.entries(n.ifs).flatMap(([e, x]) => (x.type === "dhcp" ? ["", `auto ${e}`, `iface ${e} inet dhcp`] : x.type === "static" ? ["", `auto ${e}`, `iface ${e} inet static`, `        address ${x.addr}`, `        netmask ${x.mask}`, ...(x.gw ? [`        gateway ${x.gw}`] : [])] : []))].join("\n");
 
 function udhcpc(c: Ctx, h: Host, v: Vm, a: string[]) {
   const dev = a.includes("-i") ? a[a.indexOf("-i") + 1] : "eth0";
@@ -1894,36 +2509,48 @@ function udhcpc(c: Ctx, h: Host, v: Vm, a: string[]) {
     n.ip = "10.0.2.15";
     return say(c, "udhcpc: sending discover\nudhcpc: sending select for 10.0.2.15\nudhcpc: lease of 10.0.2.15 obtained, lease time 86400", "ok");
   }
-  const srv = dhcpOn(h, n.br, c.now);
-  if (!srv || srv === v) return fail(c, "udhcpc: sending discover\nudhcpc: sending discover\nudhcpc: sending discover\nudhcpc: no lease, failing");
-  if (!n.ip) give(h, n, srv);
-  say(c, `udhcpc: sending discover\nudhcpc: sending select for ${n.ip}\nudhcpc: lease of ${n.ip} obtained, lease time 600`, "ok");
-  c.fx.push({ k: "packet", path: [`vm:${v.pid}`, `br:${h.ip}:${n.br}`, `vm:${srv.pid}`], tone: "dhcp" }, { k: "packet", path: [`vm:${srv.pid}`, `br:${h.ip}:${n.br}`, `vm:${v.pid}`], tone: "dhcp" });
-  c.lab.done.add("dhcp");
+  if (dhcpTry(c, h, v, n, a.includes("-b"))) c.lab.done.add("dhcp");
 }
 
-/** Can VM v reach `ip` on one of the host's bridges (same LAN, or one router hop with ip_forward)? */
+/** One udhcpc run on a bridge NIC (the same MAC gets the same IP back). */
+function dhcpTry(c: Ctx, h: Host, v: Vm, n: Nic, bg: boolean) {
+  const had = n.ip;
+  n.ip = undefined;
+  if (lease(c.lab, h, v, n, c.now, c.fx)) {
+    say(c, `udhcpc: sending discover\nudhcpc: sending select for ${n.ip}\nudhcpc: lease of ${n.ip} obtained, lease time 600`, "ok", 400);
+    return true;
+  }
+  n.ip = had;
+  bounce(c.lab, h, n.br!, c.fx);
+  c.fx.push({ k: "dora", stage: "discover", from: `vm:${v.pid}`, to: "", path: [`vm:${v.pid}`, `br:${h.ip}:${n.br}`], ip: "", lost: true });
+  say(c, "udhcpc: sending discover\nudhcpc: sending discover\nudhcpc: sending discover", undefined, 600);
+  if (bg) say(c, "udhcpc: no lease, forking to background", undefined, 1200);
+  else fail(c, "udhcpc: no lease, failing");
+  return false;
+}
+
+/** Can VM v reach `ip` (same LAN, across the overlay too, or one router hop with ip_forward)? */
 function reachable(c: Ctx, h: Host, v: Vm, ip: string): boolean {
-  for (const n of v.nics) if (n.kind === "bridge" && n.ip && sameNet(n.ip, ip)) return true;
+  const t = target(c, ip);
+  if (t && v.nics.some((n) => n.kind === "bridge" && n.ip && sameNet(n.ip, ip) && segOf(c.lab, h.ip, n.br!) === segOf(c.lab, t.h.ip, t.n.br!))) return true;
   const route = v.routes.find((r) => r.net === "0.0.0.0/0" || sameNet(r.net.split("/")[0], ip));
   if (!route) return false;
   const router = h.vms.find((x) => x !== v && x.nics.some((n) => n.ip === route.via));
   return !!router && router.fwdOn && router.nics.some((n) => n.ip && sameNet(n.ip, ip));
 }
 
-function ping(c: Ctx, from: { h: Host; v?: Vm }, dest: string) {
+function ping(c: Ctx, from: { h: Host; v?: Vm }, dest: string, n = 4) {
   const { h, v } = from;
   if (!dest) return fail(c, "ping: usage error: Destination address required");
-  const ok = (path: string[], n = 4, dup = false) => {
+  const ok = (path: string[], dup = false, far = false) => {
     say(c, `PING ${dest} (${dest}): 56 data bytes`);
-    for (let i = 0; i < n; i++) say(c, `64 bytes from ${dest}: seq=${i} ttl=64 time=0.${4 + i}12 ms${dup && i % 2 ? " (DUP!)" : ""}`, undefined, 300 * (i + 1));
+    for (let i = 0; i < n; i++) say(c, `64 bytes from ${dest}: seq=${i} ttl=64 time=${far ? ["5.638", "1.204", "0.987", "1.112"][i % 4] : `0.${4 + (i % 6)}12`} ms${dup && i % 2 ? " (DUP!)" : ""}`, undefined, 300 * (i + 1));
     say(c, `--- ${dest} ping statistics ---\n${n} packets transmitted, ${n} packets received, 0% packet loss`, "ok", 300 * n + 100);
     c.fx.push({ k: "packet", path, tone: "ok" }, { k: "packet", path: [...path].reverse(), tone: "ok" });
   };
   const lost = (why?: string) => {
     say(c, `PING ${dest} (${dest}): 56 data bytes`);
-    say(c, `--- ${dest} ping statistics ---\n4 packets transmitted, 0 packets received, 100% packet loss`, "err", 1300);
-    c.ok = false;
+    soft(c, `--- ${dest} ping statistics ---\n${n} packets transmitted, 0 packets received, 100% packet loss`, 300 * n + 100);
     if (why) tip(c, why);
   };
   if (!v) {
@@ -1931,23 +2558,186 @@ function ping(c: Ctx, from: { h: Host; v?: Vm }, dest: string) {
     const other = findHost(c.lab, dest);
     if (other) return other.dead ? lost() : ok([`srv:${h.ip}`, `srv:${other.ip}`]);
     if (dest.startsWith("10.0.2.")) return lost("La red user (10.0.2.0/24) vive dentro de cada proceso QEMU: el host no la ve.");
-    const t = target(c, h, dest);
-    const viaBr = t && [...h.bridges.keys()].some((b) => b === t.n.br && sameNet(bridgeIp(h, b), dest));
-    if (t && viaBr && isUp(t.v, c.now)) return ok([`srv:${h.ip}`, `br:${h.ip}:${t.n.br}`, `vm:${t.v.pid}`]);
+    const t = target(c, dest);
+    const br = t && [...h.bridges.keys()].find((b) => sameNet(bridgeIp(h, b), dest) && segOf(c.lab, h.ip, b) === segOf(c.lab, t.h.ip, t.n.br!));
+    if (t && br && isUp(t.v, c.now)) return ok([`srv:${h.ip}`, ...hops(c.lab, h, br, t.h, t.n.br!).path, `vm:${t.v.pid}`]);
     return lost(/^\d+\.\d+\.\d+\.\d+$/.test(dest) && !dest.startsWith("10.") ? "La VLAN 301 de prácticas no tiene salida a Internet." : undefined);
   }
-  if (v.nics.some((n) => n.kind === "user") && (dest.startsWith("10.0.2.") || !/^10\.0\.0\.|^10\.0\.[1-9]\./.test(dest))) return lost("La red user (SLiRP) no implementa ICMP: el ping no funciona, pero TCP sí (prueba ssh root@10.0.2.2).");
+  const mine = v.nics.find((x) => x.kind === "bridge" && x.ip && sameNet(x.ip, dest));
+  if (!mine && v.nics.some((x) => x.kind === "user") && (dest.startsWith("10.0.2.") || !/^10\.0\.0\.|^10\.0\.[1-9]\./.test(dest)))
+    return lost(target(c, dest) ? `${vmName(h, v)} no tiene tarjeta en la LAN de ${dest} y nadie enruta hacia ella: el ping sale por la red user y se pierde.` : "La red user (SLiRP) no implementa ICMP: el ping no funciona, pero TCP sí (prueba ssh root@10.0.2.2).");
   const hostBr = [...h.bridges.keys()].find((b) => bridgeIp(h, b) === dest);
-  if (hostBr && v.nics.some((n) => n.br === hostBr && n.ip)) return ok([`vm:${v.pid}`, `br:${h.ip}:${hostBr}`, `srv:${h.ip}`]);
-  const t = target(c, h, dest);
+  if (hostBr && v.nics.some((x) => x.br === hostBr && x.ip)) return ok([`vm:${v.pid}`, `br:${h.ip}:${hostBr}`, `srv:${h.ip}`]);
+  const t = target(c, dest);
   if (t && t.v !== v && isUp(t.v, c.now) && reachable(c, h, v, dest)) {
-    const dup = h.vms.some((x) => x !== t.v && x.nics.some((n) => n.br === t.n.br && n.mac === t.n.mac));
+    const dup = t.h.vms.some((x) => x !== t.v && x.nics.some((y) => y.br === t.n.br && y.mac === t.n.mac));
     if (dup) tip(c, `Hay dos tarjetas con la MAC ${t.n.mac} en ${t.n.br}: los paquetes se duplican o se pierden. Cada NIC, su MAC.`);
-    c.lab.done.add(v.nics.some((n) => sameNet(n.ip, dest)) ? "ping-lan" : "ping-route");
-    return ok([`vm:${v.pid}`, `br:${h.ip}:${t.n.br}`, `vm:${t.v.pid}`], 4, dup);
+    const way = mine ? hops(c.lab, h, mine.br!, t.h, t.n.br!) : { path: [`br:${h.ip}:${t.n.br}`], vni: undefined };
+    c.lab.done.add(mine ? "ping-lan" : "ping-route");
+    if (way.vni !== undefined) {
+      c.lab.done.add("ping-tunnel").add(`ping-vni:${way.vni}`);
+      c.fx.push({ k: "encap", vni: way.vni, from: h.ip, to: t.h.ip, ok: true });
+    }
+    return ok([`vm:${v.pid}`, ...way.path, `vm:${t.v.pid}`], dup, way.vni !== undefined);
   }
-  if (v.nics.every((n) => !n.ip)) return lost("Esta MV no tiene IP en ninguna interfaz.");
+  if (v.nics.every((x) => !x.ip)) return lost("Esta MV no tiene IP en ninguna interfaz.");
+  if (!mine && !v.routes.length && !v.nics.some((x) => x.kind === "user")) {
+    if (v.nics.some((x) => x.kind === "bridge" && !x.ip)) c.lab.done.add("trap:eth1");
+    say(c, `PING ${dest} (${dest}): 56 data bytes`);
+    return soft(c, "ping: sendto: Network unreachable");
+  }
+  if (mine) bounce(c.lab, h, mine.br!, c.fx);
   lost();
+}
+
+/* ------------------------------------------------------------------ OpenRC, setup-interfaces and vi inside Alpine */
+
+function service(c: Ctx, h: Host, v: Vm, name?: string, act?: string) {
+  if (!name) return fail(c, "Usage: service <service> <start|stop|restart|status>");
+  if (!["networking", "sshd", "udhcpc"].includes(name) && !(name === "dhcpd" && v.role === "dhcp")) return fail(c, ` * service: service \`${name}' does not exist`);
+  if (!act || !["start", "stop", "restart", "status"].includes(act)) return fail(c, ` * ${name}: unknown function '${act ?? ""}'`);
+  const st = name === "dhcpd" ? (v.svc.dhcpd ?? "started") : "started";
+  if (act === "status") {
+    return st === "started" ? say(c, " * status: started", "ok") : soft(c, " * status: stopped");
+  }
+  if (name === "networking") return networking(c, h, v, act);
+  if (name !== "dhcpd") return say(c, [...(act !== "start" ? [rc(`Stopping ${name}`, true)] : []), ...(act !== "stop" ? [rc(`Starting ${name}`, true)] : [])].join("\n"));
+  if (act === "start" && st === "started") return say(c, " * WARNING: dhcpd has already been started");
+  if (st === "started") {
+    say(c, rc("Stopping dhcpd", true));
+    v.svc.dhcpd = "stopped";
+    v.serves = undefined;
+    c.fx.push({ k: "svc", vm: `vm:${v.pid}`, svc: "dhcpd", state: "stopped" });
+  }
+  if (act !== "stop") dhcpdUp(c, h, v);
+}
+
+/** dhcpd starting, as OpenRC prints it; the reasons of a failure go to /var/log/messages. */
+function dhcpdUp(c: Ctx, h: Host, v: Vm) {
+  if (!startDhcpd(c.lab, h, v, c.now, c.fx).length) return say(c, rc("Starting dhcpd", true), "ok");
+  soft(c, `${rc("Starting dhcpd", false)}\n * ERROR: dhcpd failed to start`);
+  tip(c, "El porqué está en el log: grep dhcpd /var/log/messages");
+}
+
+/** service networking: NICs down and up again with /etc/network/interfaces; it restarts only the dependents that were running. */
+function networking(c: Ctx, h: Host, v: Vm, act: string) {
+  const dep = v.role === "dhcp" && v.svc.dhcpd === "started";
+  if (v.role === "dhcp" && !dep) c.lab.done.add("trap:networking");
+  const cfg = netOf(h, v).ifs;
+  const eths = v.nics.map((_, i) => `eth${i}`).filter((e) => cfg[e] && cfg[e].type !== "none");
+  if (act !== "start") {
+    say(c, " * WARNING: you are stopping a boot service", "warn");
+    if (dep) {
+      say(c, rc("Stopping dhcpd", true));
+      v.svc.dhcpd = "stopped";
+      v.serves = undefined;
+    }
+    say(c, [" * Stopping networking ...", rc("  lo", true), ...eths.map((e) => rc(`  ${e}`, true))].join("\n"));
+    for (const n of v.nics) if (n.kind === "bridge") n.ip = undefined;
+  }
+  if (act === "stop") return;
+  say(c, ` * Starting networking ...\n${rc("  lo", true)}`);
+  v.nics.forEach((n, i) => {
+    const k = cfg[`eth${i}`];
+    if (n.kind !== "bridge" || !k || k.type === "none") return;
+    if (k.type === "static") n.ip = k.addr;
+    else dhcpTry(c, h, v, n, true);
+    say(c, rc(`  eth${i}`, true));
+  });
+  if (dep) dhcpdUp(c, h, v);
+}
+
+const classMask = (ip: string) => (+ip.split(".")[0] < 128 ? "255.0.0.0" : +ip.split(".")[0] < 192 ? "255.255.0.0" : "255.255.255.0");
+/** The current setup-interfaces question, with its default in brackets (what Enter accepts). */
+function askText(v: Vm, a: Ask): string {
+  const old = a.cur ? a.old[a.cur] : undefined;
+  if (a.q === "pick") return `Which one do you want to initialize? (or '?' or 'done') [${v.nics.map((_, i) => `eth${i}`).find((e) => !a.cfg[e]) ?? "done"}]`;
+  if (a.q === "ip") return `Ip address for ${a.cur}? (or 'dhcp', 'none', '?') [${old?.type === "static" ? old.addr : "dhcp"}]`;
+  if (a.q === "mask") return `Netmask? [${classMask(a.addr!)}]`;
+  if (a.q === "gw") return `Gateway? (or 'none') [${old?.type === "static" && old.gw ? old.gw : "none"}]`;
+  return "Do you want to do any manual network configuration? (y/n) [n]";
+}
+
+function answer(c: Ctx, f: Frame, input: string) {
+  const hit = vmOf(c.lab, f.pid);
+  const a = f.ask!;
+  if (!hit) return void (f.ask = undefined);
+  const { h, v } = hit;
+  const val = input.trim() || /\[([^\]]*)\]$/.exec(askText(v, a))?.[1] || "";
+  const eths = v.nics.map((_, i) => `eth${i}`);
+  const next = () => {
+    a.cur = undefined;
+    a.q = eths.every((e) => a.cfg[e]) ? "manual" : "pick";
+  };
+  if (val === "?") return say(c, "(simulador) responde a lo que pide: Intro acepta lo que sale entre corchetes.", "dim");
+  if (a.q === "pick") {
+    if (val === "done") return void (a.q = "manual");
+    if (!eths.includes(val)) return say(c, `${val} is not a valid interface`, "err");
+    a.cur = val;
+    a.q = "ip";
+    return;
+  }
+  if (a.q === "ip") {
+    if (val === "dhcp" || val === "none") {
+      a.cfg[a.cur!] = val === "dhcp" ? { type: "dhcp" } : { type: "none" };
+      return next();
+    }
+    if (!isIp(val)) return say(c, `${val} is not a valid IPv4 address`, "err");
+    a.addr = val;
+    a.q = "mask";
+    return;
+  }
+  if (a.q === "mask") {
+    if (!isIp(val)) return say(c, `${val} is not a valid netmask`, "err");
+    a.mask = val;
+    a.q = "gw";
+    return;
+  }
+  if (a.q === "gw") {
+    const gw = val === "none" ? undefined : val;
+    a.cfg[a.cur!] = { type: "static", addr: a.addr!, mask: a.mask!, gw };
+    say(c, `Configuration for ${a.cur}:\n  type=static\n  address=${a.addr}\n  netmask=${a.mask}\n  gateway=${gw ?? ""}`);
+    return next();
+  }
+  // writes /etc/network/interfaces with what was answered (and nothing else); applies nothing yet
+  f.ask = undefined;
+  setNet(h, v, { ...netOf(h, v), ifs: a.cfg });
+  c.lab.done.add("setup-interfaces");
+  for (const [e, x] of Object.entries(a.cfg))
+    if (x.type === "static") {
+      if (x.mask === "255.0.0.0") tip(c, `${e}: máscara 255.0.0.0 (la que propone por clase): una /8 que se pisa con la red de los KVM. Escribe la del enunciado (255.255.255.0).`);
+      const old = a.old[e];
+      if (x.gw && !inNet(x.gw, x.addr, x.mask)) tip(c, `${e}: la puerta de enlace ${x.gw} ni siquiera está en tu red (es la de la configuración vieja). Si no hay router: none.`);
+      else if (x.gw && old?.type === "static" && x.gw === old.gw) tip(c, `${e}: la puerta de enlace ${x.gw} es la de la configuración vieja y en esta LAN no hay router. Si no hay router: none.`);
+    }
+  const lost = eths.filter((e) => !a.cfg[e] && a.old[e]);
+  if (lost.length) tip(c, `No has configurado ${lost.join(", ")}: desaparece del fichero y, al reiniciar la red, se queda sin IP.`);
+  tip(c, "setup-interfaces solo escribe /etc/network/interfaces: la tarjeta sigue con la IP vieja hasta service networking restart.");
+}
+
+/** vi: the UI edits the whole buffer; a multi-line input replaces it, then :wq / :w / :q / :q! as in vi. */
+function editor(c: Ctx, f: Frame, input: string) {
+  const hit = vmOf(c.lab, f.pid);
+  const e = f.edit!;
+  if (!hit) return void (f.edit = undefined);
+  const lines = input.replace(/\r/g, "").split("\n");
+  const last = lines[lines.length - 1].trim();
+  const cmd = /^(:wq!?|:x|ZZ|:w!?|:q!?)$/.test(last) ? last : undefined;
+  if (lines.length > 1) {
+    e.buf = cmd ? lines.slice(0, -1) : lines;
+    e.dirty = true;
+  } else if (!cmd) return say(c, "(vi) cambia el texto en el editor y guarda con :wq; para salir sin guardar, :q!", "dim");
+  if (!cmd) return;
+  if (cmd === ":q" && e.dirty) return say(c, "E37: No write since last change (add ! to override)", "err");
+  if (cmd.startsWith(":q")) return void (f.edit = undefined);
+  const { h, v } = hit;
+  if (e.path === "/etc/dhcp/dhcpd.conf") setNet(h, v, { ...netOf(h, v), conf: [...e.buf] });
+  const text = e.buf.join("\n");
+  say(c, `"${e.path}" ${e.buf.length}L, ${text.length + 1}C written`, "ok");
+  c.fx.push({ k: "edit", vm: `vm:${v.pid}`, file: e.path, text, saved: true });
+  c.lab.done.add(`edit:${e.path}`);
+  e.dirty = false;
+  if (!cmd.startsWith(":w") || cmd.startsWith(":wq")) f.edit = undefined;
 }
 
 function shutdown(c: Ctx, h: Host, v: Vm) {
@@ -1971,7 +2761,10 @@ function reboot(c: Ctx, h: Host, v: Vm) {
   say(c, "The system is going down NOW!");
   say(c, "reboot: Restarting system", undefined, 600);
   v.upAt = c.now + 900 + bootMs(v);
-  v.nics.forEach((n) => n.kind === "bridge" && v.role !== "dhcp" && ((n.tried = false), (n.ip = undefined)));
+  for (const n of v.nics) if (n.kind === "bridge") [n.tried, n.ip] = [false, undefined];
+  v.svc = {};
+  v.serves = undefined;
+  v.logged = false;
   c.out.push(...bootLines(c, h, v, tty, 900));
 }
 
