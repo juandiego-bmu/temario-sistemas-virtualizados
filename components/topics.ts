@@ -15,7 +15,7 @@ export const TOPICS = [
 export const REVIEW = [
   { id: "redes", n: "P2", title: "Redes de la P2, paso a paso", tag: "user, bridges y VXLAN", hue: 165, kind: "Práctica" },
   { id: "sim", n: "3D", title: "Laboratorio 3D", tag: "simulador de P1 y P2", hue: 190, kind: "Práctica" },
-  { id: "test", n: "?", title: "Test de examen", tag: "banco de preguntas", hue: 280, kind: "Repaso" },
+  { id: "test", n: "?", title: "Simulacros y test", tag: "conceptos de QEMU y teoría", hue: 280, kind: "Repaso" },
   { id: "chuleta", n: "✓", title: "Chuleta del laboratorio", tag: "comandos y trampas", hue: 160, kind: "Repaso" },
 ] as const;
 

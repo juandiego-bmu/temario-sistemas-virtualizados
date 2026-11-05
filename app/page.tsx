@@ -15,6 +15,7 @@ import { SnapshotFigure } from "@/components/figs/snapshot";
 import { StackFigure } from "@/components/figs/stack";
 import { Hero3D } from "@/components/hero3d";
 import { RouteMap, TrueFalse, type VF } from "@/components/progress";
+import { ConceptQuiz } from "@/components/concept-quiz";
 import { TestBank } from "@/components/testbank";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Formula, T, Terms } from "@/components/terms";
@@ -542,9 +543,10 @@ export default function Page() {
           <LabSim />
         </Review>
 
-        <Divider h={280} kicker="Repaso" title="Ponte a prueba" meta="test tipo examen y chuleta para el laboratorio" />
+        <Divider h={280} kicker="Repaso" title="Ponte a prueba" meta="simulacros de conceptos, test tipo examen y chuleta" />
 
-        <Review id="test" lead="Preguntas como las del cuestionario del profesor, con la explicación de cada respuesta. Filtra por tema y repasa las que falles.">
+        <Review id="test" lead="Primero, simulacros de la parte de conceptos del examen de laboratorio (máquinas, consolas, discos y redes), con la página del PDF de cada respuesta. Después, el test de teoría, como el cuestionario del profesor.">
+          <ConceptQuiz />
           <TestBank />
         </Review>
 
