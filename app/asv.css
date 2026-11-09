@@ -1151,6 +1151,15 @@ body.iso {
   box-shadow: 0 0 0 2px var(--anatomy-strong);
 }
 
+/* Marked as "dudosa" in the exam: a stripe underneath. */
+.tb-bar button[data-flag] {
+  box-shadow: 0 0 0 1px var(--line), inset 0 -3px 0 var(--accent);
+}
+
+.tb-bar button[data-flag][data-on] {
+  box-shadow: 0 0 0 2px var(--anatomy-strong), inset 0 -3px 0 var(--accent);
+}
+
 .tb-q .chip {
   font: 11px var(--anatomy-mono);
   color: var(--accent);
@@ -1222,6 +1231,14 @@ body.iso {
 .tb-result b {
   font: 700 22px var(--font-display), sans-serif;
   color: var(--accent);
+}
+
+.tb-result p {
+  margin: 0 0 6px;
+}
+
+.tb-result p:last-child {
+  margin-bottom: 0;
 }
 
 .cheat {

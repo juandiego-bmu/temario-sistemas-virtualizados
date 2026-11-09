@@ -1,7 +1,8 @@
 // Self-check of the snapshot trainer and of how the test bank grades (node scripts/snap-check.mts).
 import assert from "node:assert/strict";
 import { PROF, randomExercise, walk, type Exercise, type Part } from "../components/snap-logic.ts";
-import { isCorrect, normalize, qid, QUESTIONS, type Question } from "../components/questions.ts";
+import { examDraw, isCorrect, normalize, points, qid, QUESTIONS, type Question } from "../components/questions.ts";
+import { TOPICS } from "../components/topics.ts";
 
 // The professor's exercise, as the campus corrects it.
 const cost = (ex: Exercise, p: Part) => p.asks.map((a) => walk(ex, p, a).length);
@@ -48,6 +49,45 @@ const alt: Question = { t: "cpu", q: "4", s: ["Traducción binaria", "binary tra
 assert(isCorrect(alt, "TRADUCCION  BINARIA") && isCorrect(alt, "Binary Translation") && !isCorrect(alt, "virtualización binaria"));
 assert.equal(normalize("  Intérprete \t ÁRBOL  Ñu "), "interprete arbol nu");
 
+// Negative marking: guessing averages 0, a blank is 0, and one or more right answers get partial credit, never below 0.
+const four: Question = { t: "cpu", q: "5", o: ["a", "b", "c", "d"], a: 2, why: "" };
+assert.equal(points(four, 2), 1);
+assert.equal(points(four, 0), -1 / 3);
+assert.equal(points(four, undefined), 0);
+assert(Math.abs([0, 1, 2, 3].reduce((s, k) => s + points(four, k), 0)) < 1e-12, "adivinar no da 0 de media");
+assert.equal(points({ t: "popek", q: "6", o: ["Verdadero", "Falso"], a: 0, why: "" }, 1), -1);
+assert.equal(points(single, 0), -1 / 2);
+assert.deepEqual([[1, 3], [1], [1, 0], [0, 2], [], [1, 3, 0]].map((x) => points(multi, x)), [1, 0.5, 0, 0, 0, 0.5]);
+assert.equal(points(short, ""), 0);
+assert.equal(points(short, "equivalencia; eficiencia; control de recursos"), 1);
+
+// The full exam: 60 different test questions from the theory topics, each topic with its share of the bank, and the
+// least seen first (here, the even indices).
+const THEORY = TOPICS.filter((t) => t.kind === "Teoría").map((t) => t.id);
+const testable = QUESTIONS.filter((q) => THEORY.includes(q.t) && !q.s);
+for (let i = 0; i < 500; i++) {
+  const ex = examDraw(60, THEORY, (j) => j % 2);
+  assert.equal(new Set(ex).size, 60);
+  assert(ex.every((j) => THEORY.includes(QUESTIONS[j].t) && !QUESTIONS[j].s && j % 2 === 0));
+  for (const t of THEORY) {
+    const share = (60 * testable.filter((q) => q.t === t).length) / testable.length;
+    const got = ex.filter((j) => QUESTIONS[j].t === t).length;
+    assert(got === Math.floor(share) || got === Math.ceil(share), `${t}: ${got} preguntas para una cuota de ${share.toFixed(2)}`);
+  }
+}
+// With weights: the professor's mix by tema (11, 15 and 4 of 30) gives 22, 30 and 8 of 60.
+const mix: Record<string, number> = { T1: 11, T2: 15, T3: 4 };
+const tagOf = (id: string) => TOPICS.find((t) => t.id === id)!.tag;
+const per = (id: string) => testable.filter((q) => q.t === id).length;
+const weight = (id: string) => (mix[tagOf(id)] * per(id)) / THEORY.filter((t) => tagOf(t) === tagOf(id)).reduce((s, t) => s + per(t), 0);
+for (let i = 0; i < 500; i++) {
+  const ex = examDraw(60, THEORY, () => 0, weight);
+  assert.equal(new Set(ex).size, 60);
+  const byTag = { T1: 0, T2: 0, T3: 0 } as Record<string, number>;
+  ex.forEach((j) => byTag[tagOf(QUESTIONS[j].t)]++);
+  assert(Math.abs(byTag.T1 - 22) <= 1 && Math.abs(byTag.T2 - 30) <= 1 && byTag.T3 === 8, JSON.stringify(byTag));
+}
+
 // The bank: well formed, and one id per statement (the stats are kept by id).
 assert.equal(new Set(QUESTIONS.map(qid)).size, QUESTIONS.length, "dos preguntas con el mismo enunciado");
 for (const q of QUESTIONS) {
@@ -61,4 +101,4 @@ for (const q of QUESTIONS) {
 
 const kinds = { una: 0, varias: 0, corta: 0 };
 for (const q of QUESTIONS) kinds[q.s ? "corta" : Array.isArray(q.a) ? "varias" : "una"]++;
-console.log(`OK · ejercicio del profesor 4 2 3 2 2 4 5 2 3 · 3000 ejercicios aleatorios · ${QUESTIONS.length} preguntas (${kinds.una} de una, ${kinds.varias} de varias, ${kinds.corta} cortas; ${QUESTIONS.filter((q) => q.prof).length} del profesor)`);
+console.log(`OK · ejercicio del profesor 4 2 3 2 2 4 5 2 3 · 3000 ejercicios aleatorios · penalización y examen de 60 · ${QUESTIONS.length} preguntas (${kinds.una} de una, ${kinds.varias} de varias, ${kinds.corta} cortas; ${QUESTIONS.filter((q) => q.prof).length} del profesor)`);

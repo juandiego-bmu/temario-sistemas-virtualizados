@@ -248,6 +248,7 @@ export default function Page() {
             <p className="hero-sub">Diez temas y solo lo que se pregunta. En cada uno: las ideas clave, una figura que se mueve, un truco para recordarlo y un verdadero o falso para comprobar que te lo sabes.</p>
             <div className="hero-chips">
               <Countdown at="2026-11-12" label="Test de teoría" when="jue 12 nov" />
+              <span className="countdown ghost">Unas 60 preguntas tipo test</span>
               <span className="countdown ghost">Más de un 4 en cada parcial</span>
             </div>
           </div>
@@ -606,7 +607,7 @@ export default function Page() {
 
         <Divider h={280} kicker="Repaso" title="Ponte a prueba" meta="test de teoría, snapshots, conceptos y chuleta" />
 
-        <Review id="test" lead="Para el test de teoría del jueves 12 de noviembre. Primero, el ejercicio de snapshots del campus y otros nuevos como él, con el recorrido paso a paso. Después, el banco de test, como el cuestionario del profesor: de una respuesta, de varias y de respuesta corta. Al final siguen los simulacros de conceptos de QEMU del examen de laboratorio, que ya pasó.">
+        <Review id="test" lead="Para el test de teoría del jueves 12 de noviembre: unas 60 preguntas tipo test de los temas 1, 2 y 3. Primero, el ejercicio de snapshots del campus y otros nuevos como él, con el recorrido paso a paso. Después, el banco de test, con un examen completo de 60 preguntas que corrige restando los fallos. Al final siguen los simulacros de conceptos de QEMU del examen de laboratorio, que ya pasó.">
           <SnapTrainer />
           <TestBank />
           <ConceptQuiz />

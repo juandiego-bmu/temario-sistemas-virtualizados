@@ -28,6 +28,50 @@ export function isCorrect(q: Question, ans: Answer | undefined): boolean {
   return ans === q.a;
 }
 
+/**
+ * Points with negative marking, as assumed for the exam: right 1, blank 0, wrong −1/(k−1) with k options, so guessing
+ * averages 0 (−1/3 with four, −1 in true or false). One or more right answers: Moodle's partial credit, +1/c per right
+ * option ticked and −1/(k−c) per wrong one, kept between 0 and 1. Short answers: 1 or 0.
+ */
+export function points(q: Question, ans: Answer | undefined): number {
+  const a = q.a;
+  const k = q.o?.length ?? 0;
+  if (q.s || ans === undefined) return isCorrect(q, ans) ? 1 : 0;
+  if (!Array.isArray(a)) return ans === a ? 1 : -1 / (k - 1);
+  if (!Array.isArray(ans)) return 0;
+  const sum = ans.reduce((s, x) => s + (a.includes(x) ? 1 / a.length : -1 / (k - a.length)), 0);
+  return Math.min(1, Math.max(0, sum));
+}
+
+export const shuffle = <T,>(list: T[]) => {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+/**
+ * A draw like the real exam: n test questions (no short answers) from these topics, each topic with its share of the
+ * weights (by default, of the bank). Systematic sampling, so each topic gets the floor or the ceiling of its share; within
+ * a topic, the least seen first, so one exam repeats as little as possible of the last. Indices into QUESTIONS.
+ */
+export function examDraw(n: number, topics: readonly string[], seen: (i: number) => number, weight?: (t: string) => number): number[] {
+  const blocks = topics.map((t) => shuffle(QUESTIONS.flatMap((q, i) => (q.t === t && !q.s ? [i] : []))).sort((x, y) => seen(x) - seen(y)));
+  const w = topics.map((t, j) => (weight ? weight(t) : blocks[j].length));
+  const step = w.reduce((s, x) => s + x, 0) / n;
+  const r = Math.random() * step;
+  let k = 0;
+  let end = 0;
+  return blocks.flatMap((b, j) => {
+    const from = k;
+    end += w[j];
+    while (k < n && r + k * step < end) k++;
+    return b.slice(0, k - from);
+  });
+}
+
 /** A short stable id from the statement (FNV-1a), so the stats survive adding or reordering questions. */
 export const qid = (q: Question) => {
   let h = 2166136261;

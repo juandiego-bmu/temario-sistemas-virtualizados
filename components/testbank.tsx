@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { isCorrect, normalize, qid, QUESTIONS, type Answer, type Question } from "./questions";
+import { examDraw, isCorrect, normalize, points, qid, QUESTIONS, shuffle, type Answer, type Question } from "./questions";
 import { TOPICS } from "./topics";
 
 type Mode = "practice" | "exam" | "review";
@@ -13,24 +13,27 @@ type Stats = Record<string, { ok: number; bad: number }>; // by qid, so new ques
 
 const KEY = "asv-test-v2";
 const EXAM_SIZE = 20;
+const FULL_SIZE = 60; // the real exam: about 60 test questions on topics 1, 2 and 3
+const THEORY: readonly string[] = TOPICS.filter((t) => t.kind === "Teoría").map((t) => t.id);
+// The professor's quiz had 11 questions of T1, 15 of T2 and 4 of T3: the full exam keeps that mix, and inside each
+// tema every topic weighs what it does in the bank.
+const MIX: Record<string, number> = { T1: 11, T2: 15, T3: 4 };
+const tag = (id: string) => TOPICS.find((t) => t.id === id)!.tag;
+const testable = (id: string) => QUESTIONS.filter((q) => q.t === id && !q.s).length;
+const weight = (id: string) => (MIX[tag(id)] * testable(id)) / THEORY.filter((t) => tag(t) === tag(id)).reduce((s, t) => s + testable(t), 0);
 const IDS = QUESTIONS.map(qid);
 const FROM_PROF = QUESTIONS.filter((q) => q.prof).length;
-
-const shuffle = <T,>(list: T[]) => {
-  const a = [...list];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-};
 
 const used = TOPICS.filter((t) => QUESTIONS.some((q) => q.t === t.id));
 const trueFalse = (q: Question) => q.o?.map(normalize).join("/") === "verdadero/falso";
 // An option picked, a box ticked or some text typed.
 const filled = (v?: Answer) => v !== undefined && String(v).trim() !== "";
+const clock = (ms: number) => {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
 
-/** The question bank: practice with instant feedback, a 20-question exam, or review what you failed. */
+/** The question bank: practice with instant feedback, the full 60-question exam or a short one, or review what you failed. */
 export function TestBank() {
   const [mode, setMode] = React.useState<Mode>("practice");
   const [topics, setTopics] = React.useState<Set<string>>(new Set());
@@ -39,13 +42,21 @@ export function TestBank() {
   const [pos, setPos] = React.useState(0);
   const [ans, setAns] = React.useState<Record<number, Answer>>({});
   const [sent, setSent] = React.useState<Record<number, true>>({}); // checked one by one (practice and review)
+  const [flags, setFlags] = React.useState<Record<number, true>>({}); // "dudosa", like Moodle's «Marcar pregunta»
   const [graded, setGraded] = React.useState(false);
   const [stats, setStats] = React.useState<Stats>({});
+  const [t0, setT0] = React.useState(0);
+  const [now, setNow] = React.useState(0);
   React.useEffect(() => {
     try {
       setStats(JSON.parse(localStorage.getItem(KEY) ?? "{}"));
     } catch {}
   }, []);
+  React.useEffect(() => {
+    if (!deck || mode !== "exam" || graded) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [deck, mode, graded]);
   const save = (next: Stats) => {
     setStats(next);
     try {
@@ -53,15 +64,18 @@ export function TestBank() {
     } catch {}
   };
   const bad = (i: number) => (stats[IDS[i]]?.bad ?? 0) > (stats[IDS[i]]?.ok ?? 0);
-  const failed = QUESTIONS.map((_, i) => i).filter(bad);
+  const failed = QUESTIONS.map((_, i) => i).filter((i) => bad(i) && THEORY.includes(QUESTIONS[i].t));
   const pool = (m: Mode) => {
-    const all = QUESTIONS.map((_, i) => i).filter((i) => (!topics.size || topics.has(QUESTIONS[i].t)) && (!prof || QUESTIONS[i].prof));
+    // No topic chosen: the eight theory ones, since the lab exam is over.
+    const all = QUESTIONS.map((_, i) => i).filter((i) => (topics.size ? topics.has(QUESTIONS[i].t) : THEORY.includes(QUESTIONS[i].t)) && (!prof || QUESTIONS[i].prof));
     if (m === "review") return all.filter(bad);
     return all;
   };
-  const start = (m: Mode) => {
-    let ids = shuffle(pool(m));
-    if (m === "exam") ids = ids.slice(0, EXAM_SIZE);
+  const seen = (i: number) => (stats[IDS[i]]?.ok ?? 0) + (stats[IDS[i]]?.bad ?? 0);
+  // full: the real exam's size, from all the theory topics whatever the filters.
+  const start = (m: Mode, full = false) => {
+    let ids = shuffle(full ? examDraw(FULL_SIZE, THEORY, seen, weight) : pool(m));
+    if (m === "exam" && !full) ids = ids.slice(0, EXAM_SIZE);
     setMode(m);
     setDeck(
       ids.map((i) => {
@@ -72,7 +86,10 @@ export function TestBank() {
     setPos(0);
     setAns({});
     setSent({});
+    setFlags({});
     setGraded(false);
+    setT0(Date.now());
+    setNow(Date.now());
   };
   const record = (results: [number, boolean][]) => {
     const next = { ...stats };
@@ -82,7 +99,13 @@ export function TestBank() {
     });
     save(next);
   };
-  const put = (i: number, v: Answer) => setAns((a) => ({ ...a, [i]: v }));
+  const put = (i: number, v?: Answer) =>
+    setAns((a) => {
+      const n = { ...a };
+      if (v === undefined) delete n[i];
+      else n[i] = v;
+      return n;
+    });
   const check = (i: number, v: Answer) => {
     put(i, v);
     setSent((s) => ({ ...s, [i]: true }));
@@ -90,8 +113,12 @@ export function TestBank() {
   };
   const grade = () => {
     if (!deck) return;
+    const blanks = deck.filter((d) => !filled(ans[d.i])).length;
+    // Like Moodle's «Enviar todo y terminar»: a last look at what is still blank.
+    if (blanks && !confirm(`Te quedan ${blanks} en blanco: no restan, pero irán a «Repasar falladas». ¿Corregir ya?`)) return;
     setGraded(true);
-    record(deck.filter((d) => filled(ans[d.i])).map((d) => [d.i, isCorrect(QUESTIONS[d.i], ans[d.i])]));
+    setNow(Date.now());
+    record(deck.map((d) => [d.i, isCorrect(QUESTIONS[d.i], ans[d.i])])); // a blank goes to review too
   };
   // Corrected and locked: in the exam, everything at the end; otherwise, each one when checked.
   const done = (i: number) => (mode === "exam" ? graded : !!sent[i]);
@@ -109,7 +136,7 @@ export function TestBank() {
           </span>
         </header>
         <p className="tb-intro">
-          Como el cuestionario del profesor: de una respuesta, de una o más y de respuesta corta. Elige temas (o ninguno para todos) y un modo. Las opciones se barajan cada vez, salvo las de verdadero o falso, y tu progreso se guarda en este navegador.
+          El examen real tendrá unas 60 preguntas tipo test de los temas 1, 2 y 3. El examen completo lo imita: 60 preguntas con el reparto del cuestionario del profesor (22 del tema 1, 30 del 2 y 8 del 3), y cada fallo resta 1/3 si hay cuatro opciones o 1 entero en verdadero o falso, así que contestar al azar da 0 de media. Las de varias respuestas puntúan por opción, como en Moodle, y nunca bajan de 0. Para practicar, elige temas (o ninguno para los ocho de teoría) y un modo. Las opciones se barajan cada vez, salvo las de verdadero o falso, y tu progreso se guarda en este navegador.
         </p>
         <div className="tb-topics" role="group" aria-label="Temas">
           {FROM_PROF ? (
@@ -137,11 +164,14 @@ export function TestBank() {
           ))}
         </div>
         <div className="tb-modes">
+          <button type="button" className="btn" onClick={() => start("exam", true)}>
+            🎓 Examen completo · {FULL_SIZE} preguntas, los fallos restan
+          </button>
           <button type="button" className="btn" onClick={() => start("practice")} disabled={!pool("practice").length}>
             ▶ Práctica · corrección al momento ({pool("practice").length})
           </button>
-          <button type="button" className="btn" onClick={() => start("exam")} disabled={!pool("exam").length}>
-            ⏱ Simulacro · {Math.min(EXAM_SIZE, pool("exam").length)} preguntas, nota al final
+          <button type="button" className="btn ghost" onClick={() => start("exam")} disabled={!pool("exam").length}>
+            ⏱ Simulacro corto · {Math.min(EXAM_SIZE, pool("exam").length)} preguntas
           </button>
           <button type="button" className="btn ghost" onClick={() => start("review")} disabled={!pool("review").length}>
             ↻ Repasar falladas ({pool("review").length})
@@ -166,6 +196,16 @@ export function TestBank() {
   const right = (k: number) => (Array.isArray(q.a) ? q.a.includes(k) : k === q.a);
   const score = deck.filter((d) => done(d.i) && isCorrect(QUESTIONS[d.i], ans[d.i])).length;
   const topic = TOPICS.find((t) => t.id === q.t)!;
+  // Points to a grade out of 10 with one decimal; + 0 turns a -0 into 0.
+  const tenths = (x: number) => Math.round((x / deck.length) * 100) / 10 + 0;
+  const nota = (x: number) => tenths(x).toLocaleString("es", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const sum = (ds: Item[], floor = -Infinity) => ds.reduce((s, d) => s + Math.max(floor, points(QUESTIONS[d.i], ans[d.i])), 0);
+  const blank = deck.filter((d) => !filled(ans[d.i])).length;
+  const doubt = deck.filter((d) => flags[d.i] && filled(ans[d.i]));
+  const leave = () => {
+    if (mode === "exam" && !graded && Object.keys(ans).length && !confirm("¿Salir sin corregir? Se pierden las respuestas de este simulacro.")) return;
+    setDeck(null);
+  };
   const checkBtn =
     mode !== "exam" && !fin ? (
       <button type="button" className="btn" disabled={!filled(mine)} onClick={() => check(item.i, mine!)}>
@@ -175,7 +215,7 @@ export function TestBank() {
   return (
     <section className="tb reveal" aria-label="Test de teoría">
       <header className="quiz-head">
-        <span className="dg-kicker">{mode === "exam" ? "Simulacro" : mode === "review" ? "Repaso" : "Práctica"}</span>
+        <span className="dg-kicker">{mode === "exam" ? `Simulacro · ${clock(now - t0)}` : mode === "review" ? "Repaso" : "Práctica"}</span>
         <strong>
           Pregunta {pos + 1} / {deck.length}
         </strong>
@@ -191,6 +231,7 @@ export function TestBank() {
             tabIndex={-1}
             onClick={() => setPos(i)}
             data-on={i === pos ? "" : undefined}
+            data-flag={flags[d.i] ? "" : undefined}
             data-state={!filled(ans[d.i]) ? undefined : !done(d.i) ? "done" : isCorrect(QUESTIONS[d.i], ans[d.i]) ? "ok" : "bad"}
           />
         ))}
@@ -229,10 +270,11 @@ export function TestBank() {
                   <button
                     key={k}
                     type="button"
-                    aria-pressed={multi ? on : undefined}
+                    aria-pressed={multi || mode === "exam" ? on : undefined}
                     data-state={state}
                     disabled={fin}
-                    onClick={() => (multi ? put(item.i, on ? ticked.filter((x) => x !== k) : [...ticked, k]) : mode === "exam" ? put(item.i, k) : check(item.i, k))}
+                    // In the exam a second click clears the answer, but not the second click of a double-click.
+                    onClick={(e) => (multi ? put(item.i, on ? ticked.filter((x) => x !== k) : [...ticked, k]) : mode === "exam" ? put(item.i, on && e.detail < 2 ? undefined : k) : check(item.i, k))}
                   >
                     <span className="quiz-letter">
                       {multi ? (on ? "☑ " : "☐ ") : ""}
@@ -244,6 +286,7 @@ export function TestBank() {
               })}
             </div>
             {multi && checkBtn ? <div className="tb-check">{checkBtn}</div> : null}
+            {mode === "exam" && !fin && filled(mine) && !multi ? <span className="tb-kind">Pulsa otra vez tu opción para dejarla en blanco, que no resta.</span> : null}
           </>
         )}
         {fin ? (
@@ -263,18 +306,56 @@ export function TestBank() {
           Siguiente ▶
         </button>
         {mode === "exam" && !graded ? (
-          <button type="button" className="btn" onClick={grade}>
-            Corregir simulacro
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn ghost"
+              aria-pressed={!!flags[item.i]}
+              onClick={() =>
+                setFlags((f) => {
+                  const n = { ...f };
+                  if (n[item.i]) delete n[item.i];
+                  else n[item.i] = true;
+                  return n;
+                })
+              }
+            >
+              {flags[item.i] ? "⚑ Marcada como dudosa" : "⚐ Marcar como dudosa"}
+            </button>
+            <button type="button" className="btn" onClick={grade}>
+              Corregir simulacro
+            </button>
+          </>
         ) : null}
-        <button type="button" className="btn ghost" onClick={() => setDeck(null)}>
+        <button type="button" className="btn ghost" onClick={leave}>
           Terminar
         </button>
       </div>
       {mode === "exam" && graded ? (
-        <p className="tb-result">
-          Nota: <b>{((score / deck.length) * 10).toFixed(1)}</b> / 10 ({score} de {deck.length}). Recorre la barra de arriba: en rojo, las falladas con su explicación.
-        </p>
+        <div className="tb-result">
+          <p>
+            Nota con penalización: <b>{nota(sum(deck))}</b> / 10 · sin penalización, {nota(sum(deck, 0))}
+          </p>
+          <p>
+            {score} bien · {deck.length - score - blank} mal · {blank} en blanco · {clock(now - t0)} en total, {Math.round((now - t0) / 1000 / deck.length)} s por pregunta
+          </p>
+          {doubt.length ? (
+            <p>
+              Contestaste {doubt.length} dudosa{doubt.length === 1 ? "" : "s"} y acertaste {doubt.filter((d) => isCorrect(QUESTIONS[d.i], ans[d.i])).length}:{" "}
+              {tenths(sum(doubt)) === 0 ? "en total, tu nota no cambió." : `en total te ${tenths(sum(doubt)) < 0 ? "restaron" : "sumaron"} ${nota(Math.abs(sum(doubt)))} puntos de nota.`}
+            </p>
+          ) : null}
+          <p>
+            Por temas:{" "}
+            {TOPICS.filter((t) => deck.some((d) => QUESTIONS[d.i].t === t.id))
+              .map((t) => {
+                const of = deck.filter((d) => QUESTIONS[d.i].t === t.id);
+                return `${t.n} ${t.title} ${of.filter((d) => isCorrect(QUESTIONS[d.i], ans[d.i])).length}/${of.length}`;
+              })
+              .join(" · ")}
+          </p>
+          <p>Recorre la barra de arriba: en rojo, las falladas; vacías, las que dejaste en blanco. Todas tienen su explicación.</p>
+        </div>
       ) : null}
     </section>
   );
