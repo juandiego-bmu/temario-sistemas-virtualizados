@@ -7,15 +7,16 @@ export const TOPICS = [
   { id: "memoria", n: "05", title: "Memoria virtual", tag: "T2", hue: 25, kind: "Teoría" },
   { id: "discos", n: "06", title: "Discos, snapshots y clones", tag: "T2", hue: 65, kind: "Teoría" },
   { id: "red", n: "07", title: "Redes virtuales", tag: "T2", hue: 150, kind: "Teoría" },
-  { id: "qemu", n: "08", title: "QEMU: máquinas y discos", tag: "P1", hue: 185, kind: "Práctica" },
-  { id: "qemured", n: "09", title: "QEMU: redes", tag: "P2", hue: 205, kind: "Práctica" },
+  { id: "x86", n: "08", title: "Virtualización en Intel x86", tag: "T3", hue: 105, kind: "Teoría" },
+  { id: "qemu", n: "09", title: "QEMU: máquinas y discos", tag: "P1", hue: 185, kind: "Práctica" },
+  { id: "qemured", n: "10", title: "QEMU: redes", tag: "P2", hue: 205, kind: "Práctica" },
 ] as const;
 
 // Review tools after the syllabus.
 export const REVIEW = [
   { id: "redes", n: "P2", title: "Redes de la P2, paso a paso", tag: "user, bridges y VXLAN", hue: 165, kind: "Práctica" },
   { id: "sim", n: "3D", title: "Laboratorio 3D", tag: "simulador de P1 y P2", hue: 190, kind: "Práctica" },
-  { id: "test", n: "?", title: "Simulacros y test", tag: "conceptos de QEMU y teoría", hue: 280, kind: "Repaso" },
+  { id: "test", n: "?", title: "Simulacros y test", tag: "teoría, snapshots y QEMU", hue: 280, kind: "Repaso" },
   { id: "chuleta", n: "✓", title: "Chuleta del laboratorio", tag: "comandos y trampas", hue: 160, kind: "Repaso" },
 ] as const;
 

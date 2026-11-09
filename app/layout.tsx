@@ -10,7 +10,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "Sistemas Virtualizados de un vistazo",
-  description: "Resumen visual e interactivo del primer parcial de Arquitectura de Sistemas Virtualizados: hipervisores, Popek y Goldberg, CPU, RAM, discos, snapshots, redes y prácticas con QEMU/KVM.",
+  description: "Resumen visual e interactivo del primer parcial de Arquitectura de Sistemas Virtualizados: hipervisores, Popek y Goldberg, CPU, RAM, discos, snapshots, redes, x86 con VT-x y prácticas con QEMU/KVM.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

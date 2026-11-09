@@ -9,6 +9,7 @@ import { HostedNetModes, VlanDiagram } from "@/components/diagrams/network";
 import { PopekSetsDiagram, VcpuMatrix } from "@/components/diagrams/popek";
 import { NetBench, P2Quiz, P2Table, VxlanEnvelope } from "@/components/diagrams/p2bench";
 import { CommandAnatomy, PowerSim, SlirpDiagram } from "@/components/diagrams/practice";
+import { RingLadder, VmcsSteps } from "@/components/diagrams/x86";
 import { DatastoreFigure } from "@/components/figs/datastore";
 import { LabSim } from "@/components/sim/LabSim";
 import { SnapshotFigure } from "@/components/figs/snapshot";
@@ -16,6 +17,7 @@ import { StackFigure } from "@/components/figs/stack";
 import { Hero3D } from "@/components/hero3d";
 import { RouteMap, TrueFalse, type VF } from "@/components/progress";
 import { ConceptQuiz } from "@/components/concept-quiz";
+import { SnapTrainer } from "@/components/snap-trainer";
 import { TestBank } from "@/components/testbank";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Formula, T, Terms } from "@/components/terms";
@@ -59,6 +61,12 @@ const MNEMO: Record<TopicId, [string, React.ReactNode][]> = {
   red: [
     ["B · N · H", <><b>B</b>ridged: bien visible (nivel 2). <b>N</b>AT: nadie entra. <b>H</b>ost-only: hermético.</>],
     ["Trunk = varias VLAN por un cable", <>Cada trama lleva su etiqueta 802.1q, y el switch de fuera tiene que entenderla.</>],
+  ],
+  x86: [
+    ["3 · 0 · −1 · −2", <>Aplicaciones en el <b>3</b>, kernel en el <b>0</b>, hipervisor en el <b>−1</b> (VMX root) y SMM en el <b>−2</b>. Cuanto más abajo, más manda; el 1 y el 2 no se usan.</>],
+    ["ON · LAUNCH · RESUME", <><b>VMXON</b> enciende el modo root desde <b>long mode</b>, <b>VMLAUNCH</b> entra la primera vez y <b>VMRESUME</b>, después de cada exit.</>],
+    ["VMCS no es VMCB", <>Tema 3, Intel: <b>VMCS</b> y VMLAUNCH/VMRESUME. Tema 2: <b>VMCB</b> y vmrun. La misma idea con otro nombre.</>],
+    ["VT-x · EPT · VT-d", <>CPU, RAM y E/S, en ese orden: la <b>x</b> del x86 es la CPU y la <b>d</b>, la de los <b>d</b>ispositivos. En AMD: AMD-V, NPT y AMD-V<b>i</b>, con la «i» de I/O (IOMMU).</>],
   ],
   qemu: [
     ["-F de father", <><b>-F</b> mayúscula: el formato del padre (la base). <b>-f</b> minúscula: el del fichero nuevo.</>],
@@ -122,6 +130,14 @@ const VFS: Record<TopicId, VF[]> = {
     ["Un trunk 802.1q lleva tramas de varias VLAN, cada una con su etiqueta.", true, "Y el switch externo también tiene que soportarlo."],
     ["El tráfico entre dos MVs del mismo vSwitch sale por la red real.", false, "Se copia entre buffers de memoria del hipervisor."],
     ["En bridged, la MV tiene su propia IP de la LAN externa.", true, "Es un equipo más a nivel 2."],
+  ],
+  x86: [
+    ["Con VT-x, el hipervisor se ejecuta en el anillo −2.", false, "En el −1 (VMX root). El −2 es el SMM."],
+    ["En el anillo 3, POPF provoca un trap si intenta cambiar el flag de interrupciones.", false, "Solo escribe los flags aritméticos y no avisa: behaviour sensitive no privilegiada."],
+    ["Con VT-x, el kernel del guest se ejecuta en su anillo 0, en modo VMX non-root.", true, "Sus sensibles dan trap o tienen la semántica correcta: trap & emulate clásico."],
+    ["VMRESUME es la instrucción que lanza una MV por primera vez.", false, "Esa es VMLAUNCH; VMRESUME vuelve a entrar después de un VM exit."],
+    ["CPUID en el guest provoca siempre un VM exit.", true, "Es incondicional, como INVD y las instrucciones VMX; HLT o IN/OUT dependen de la máscara."],
+    ["VT-x se enciende con VMXON desde long mode.", true, "VMXON y VMXOFF activan y desactivan el modo root desde long mode."],
   ],
   qemu: [
     ["cp vm1.qcow2 copia.qcow2 crea un full clone independiente.", false, "Copia solo el delta, que sigue apuntando a la base: usa qemu-img convert."],
@@ -229,10 +245,9 @@ export default function Page() {
               <br />
               <span>lo esencial</span>
             </h1>
-            <p className="hero-sub">Nueve temas y solo lo que se pregunta. En cada uno: las ideas clave, una figura que se mueve, un truco para recordarlo y un verdadero o falso para comprobar que te lo sabes.</p>
+            <p className="hero-sub">Diez temas y solo lo que se pregunta. En cada uno: las ideas clave, una figura que se mueve, un truco para recordarlo y un verdadero o falso para comprobar que te lo sabes.</p>
             <div className="hero-chips">
-              <Countdown at="2026-11-06T12:45:00+01:00" label="Examen de laboratorio" when="vie 6 nov, 12:45" />
-              <Countdown at="2026-11-12T08:00:00+01:00" label="Test de teoría" when="12–14 nov" />
+              <Countdown at="2026-11-12" label="Test de teoría" when="jue 12 nov" />
               <span className="countdown ghost">Más de un 4 en cada parcial</span>
             </div>
           </div>
@@ -242,7 +257,7 @@ export default function Page() {
       </header>
 
       <main>
-        <Divider h={230} kicker="Teoría" title="Temas 1 y 2" meta="7 temas · lo que entra en el test" />
+        <Divider h={230} kicker="Teoría" title="Temas 1, 2 y 3" meta="8 temas · lo que entra en el test" />
 
         <Topic id="virtualizar" lead="Virtualizar es fabricar hardware ficticio tan fiel que el software de siempre funciona sin tocarlo. El hipervisor lo fabrica, lo reparte y lo vigila." figure={<ModulesDiagram />} more={<IsomorphismDiagram />}>
           <T k="Virtualizar" hot>
@@ -293,7 +308,7 @@ export default function Page() {
             sensibles de usuario ⊆ privilegiadas
           </Formula>
           <T k="El x86 clásico" hot show={[["Verlo en x86", "popek:x86"]]}>
-            <b>No cumple el teorema 1</b>: tiene 17 sensibles no privilegiadas. <code>POPF</code> en modo usuario <b>ignora en silencio</b> el cambio del flag de interrupciones; <code>PUSHF</code> o <code>SGDT</code> dejan ver el estado real. Solución: traducción binaria, híbrida y, desde 2005, VT-x / AMD-V.
+            <b>No cumple el teorema 1</b>: tiene sensibles no privilegiadas (18 instrucciones problemáticas, según el tema 3). <code>POPF</code> en modo usuario <b>ignora en silencio</b> el cambio del flag de interrupciones; <code>PUSHF</code> o <code>SGDT</code> dejan ver el estado real. Solución: traducción binaria, híbrida y, desde 2005, VT-x / AMD-V.
           </T>
         </Topic>
 
@@ -457,6 +472,52 @@ export default function Page() {
           </T>
         </Topic>
 
+        <Topic id="x86" lead="Por qué el x86 clásico no se dejaba virtualizar, cómo lo esquivó VMware y cómo lo arregló Intel con VT-x: un modo nuevo que deja al hipervisor por debajo del anillo 0 del guest." figure={<RingLadder />} more={<VmcsSteps />}>
+          <T k="Modos de IA-32" hot show={[["Ver el SMM", "ring:smi"]]}>
+            <b>Real</b>: como un 8086 (16 bits, 1 MB, sin protección); siempre se arranca en él. <b>Protegido</b>: el normal, con 4 anillos: <b>0</b> kernel, <b>1 y 2</b> sin uso, <b>3</b> usuario. <b>Virtual 8086</b>: software del 8086 como un proceso del anillo 3 (bit VM de EFLAGS). <b>System Management (SMM)</b>: el <b>anillo −2</b>, firmware de la placa en SMRAM; se entra con la interrupción SMI# y se sale con <code>RSM</code>.
+          </T>
+          <T k="x86-64: long mode" hot show={[["Encender VT-x", "ring:launch"]]}>
+            Dos submodos: <b>64-bit</b> (SO y aplicaciones de 64 bits) y <b>compatibilidad</b> (aplicaciones de IA-32 sin recompilar en un SO de 64 bits, como el virtual 8086 en IA-32). VT-x se enciende <b>desde long mode</b>.
+          </T>
+          <T k="Por qué no es virtualizable">
+            <b>18 instrucciones problemáticas</b> (Robin e Irvine, 2000): sensibles que no dan trap sin privilegio o que dejan a la MV «fisgonear» en el hipervisor. <code>SGDT</code>, <code>SLDT</code>, <code>SIDT</code> y <code>SMSW</code> leen registros del hipervisor (GDTR, LDTR, IDTR, CR0); desde 2018, <b>CR4.UMIP = 1</b> las hace privilegiadas. Sin soporte HW, VMware usó la <b>híbrida</b>: trap & emulate en modo usuario y <b>traducción binaria</b> just-in-time al pasar a modo kernel.
+          </T>
+          <T k="PUSHF y POPF" hot>
+            <b>Behaviour sensitive no privilegiadas</b>. En el anillo 3, <code>POPF</code> solo escribe los flags aritméticos: el guest cree que ha puesto <b>IF = 0</b> y las interrupciones siguen activas, sin ningún trap. <code>PUSHF</code> lee unos EFLAGS incompletos.
+          </T>
+          <T k="VT-x: root y non-root" hot show={[["Una syscall", "ring:syscall"]]}>
+            <b>VMX root</b>: todo se comporta como en el x86 de siempre; ahí va el <b>hipervisor</b>, en su anillo 0. <b>VMX non-root</b>: las sensibles se rediseñan (o dan trap o tienen la semántica correcta) y el <b>guest corre en su anillo 0</b>: trap & emulate clásico. El hipervisor queda por debajo: el <b>«ring −1»</b>.
+          </T>
+          <T
+            k="VM entry y VM exit"
+            hot
+            show={[
+              ["Lanzar la MV", "ring:launch"],
+              ["Un VM exit", "ring:cpuid"],
+            ]}
+          >
+            <code>VMXON</code> y <code>VMXOFF</code> encienden y apagan el modo root. <b>VM entry</b>: <code>VMLAUNCH</code> la primera vez y <code>VMRESUME</code> después; carga el contexto de la MV y pasa de root a non-root. <b>VM exit</b>: una interrupción o una sensible del guest; vuelve a root y se ejecuta el VMM.
+          </T>
+          <T k="VMCS" hot show={[["Paso a paso", "vmcs:play"]]}>
+            <b>Virtual Machine Control Structure</b>, cuatro áreas: <b>guest-state</b> (el guest se guarda en el exit y se carga en el entry), <b>host-state</b> (el VMM, al revés), <b>control fields</b> (qué provoca exit) y <b>exit information</b> (la causa). La CPU la lee y escribe sola; el VMM la configura con <code>VMREAD</code>, <code>VMWRITE</code> y <code>VMCLEAR</code>, y su puntero va con <code>VMPTRLD</code> y <code>VMPTRST</code>. En el tema 2 era el <b>VMCB</b>, con <code>vmrun</code>.
+          </T>
+          <T
+            k="Causas de VM exit"
+            show={[
+              ["CPUID", "ring:cpuid"],
+              ["HLT", "ring:hlt"],
+            ]}
+          >
+            <b>Siempre</b>: <code>CPUID</code>, <code>INVD</code> y las instrucciones VMX. <b>Según la máscara</b> de los control fields: <code>HLT</code>, <code>IN</code>, <code>OUT</code>, <code>LIDT</code>, <code>SIDT</code>, <code>MOV CR3</code>… <b>Eventos</b>: excepciones (un fallo de página, según su bit), IRQs, NMIs, SMIs y el VMX-preemption timer.
+          </T>
+          <T k="Soporte HW: CPU, RAM y E/S">
+            CPU: <b>VT-x</b> (Intel) y <b>AMD-V</b>. RAM: <b>EPT</b> y <b>NPT</b> (nested paging). E/S: <b>VT-d</b> y <b>AMD-Vi</b>, también llamado <b>IOMMU</b>; con VT-d, un dispositivo real se asigna directamente a una MV.
+          </T>
+          <T k="Virtualizadores x86">
+            <b>VMware</b>: Workstation, Player y Fusion (tipo 2) y vSphere <b>ESXi</b> (tipo 1). <b>KVM</b>: <code>kvm.ko</code> y <code>kvm-intel.ko</code>, la API <b>libvirt</b>, <b>QEMU</b> para emular dispositivos y los gestores <code>virsh</code> (CLI) y <code>virt-manager</code> (GUI). <b>VirtualBox</b>: hosted. <b>Oracle VM Server</b>: bare metal. <b>Xen</b> e <b>Hyper-V</b>: bare metal con MV privilegiada (Dom0, partición padre).
+          </T>
+        </Topic>
+
         <Divider h={190} kicker="Práctica" title="QEMU/KVM en el laboratorio" meta="2 temas · lo que hay que teclear el viernes 6" />
 
         <Topic
@@ -543,11 +604,12 @@ export default function Page() {
           <LabSim />
         </Review>
 
-        <Divider h={280} kicker="Repaso" title="Ponte a prueba" meta="simulacros de conceptos, test tipo examen y chuleta" />
+        <Divider h={280} kicker="Repaso" title="Ponte a prueba" meta="test de teoría, snapshots, conceptos y chuleta" />
 
-        <Review id="test" lead="Primero, simulacros de la parte de conceptos del examen de laboratorio (máquinas, consolas, discos y redes), con la página del PDF de cada respuesta. Después, el test de teoría, como el cuestionario del profesor.">
-          <ConceptQuiz />
+        <Review id="test" lead="Para el test de teoría del jueves 12 de noviembre. Primero, el ejercicio de snapshots del campus y otros nuevos como él, con el recorrido paso a paso. Después, el banco de test, como el cuestionario del profesor: de una respuesta, de varias y de respuesta corta. Al final siguen los simulacros de conceptos de QEMU del examen de laboratorio, que ya pasó.">
+          <SnapTrainer />
           <TestBank />
+          <ConceptQuiz />
         </Review>
 
         <Review id="chuleta" lead="Todo lo que hay que poder teclear el día del examen práctico, y las trampas que más caen.">
